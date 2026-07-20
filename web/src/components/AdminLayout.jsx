@@ -20,7 +20,10 @@ export default function AdminLayout() {
         </Link>
         <div className="admin-links">
           <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin" end>
-            看板 Board
+            订单 Orders
+          </NavLink>
+          <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/enquiries">
+            新资讯 Enquiries
           </NavLink>
           <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/new">
             新客户 New
