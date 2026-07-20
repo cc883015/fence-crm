@@ -83,14 +83,9 @@ npm run deploy
 
 ---
 
-## 推到 GitHub 仓库（Cursor 里操作）
+## 推到 GitHub
 
-在 Cursor 打开本文件夹后，终端执行：
 ```bash
-git init
-git add .
-git commit -m "init: fence CRM (website + CRM + D1)"
-git branch -M main
 git remote add origin https://github.com/<你的用户名>/fence-crm.git
 git push -u origin main
 ```
