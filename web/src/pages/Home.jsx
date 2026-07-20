@@ -5,6 +5,27 @@ import { useLang, t } from "../context/LangContext.jsx";
 import { CATALOGUE, CONTACT } from "../data/products.js";
 import { api } from "../lib/api.js";
 
+const HERO_PERKS = [
+  {
+    en: "More privacy,",
+    enSub: "without closing you in",
+    zh: "隐私更好，",
+    zhSub: "却不压抑封闭",
+  },
+  {
+    en: "Powder-coated aluminium",
+    enSub: "that stays sharp outdoors",
+    zh: "粉末喷涂铝合金",
+    zhSub: "户外经久如新",
+  },
+  {
+    en: "Ready stock · faster install",
+    enSub: "Brisbane to the Gold Coast",
+    zh: "现货 · 安装更快",
+    zhSub: "布里斯班到黄金海岸",
+  },
+];
+
 const BENEFITS = [
   {
     img: "/products/decorative.jpg",
@@ -148,6 +169,22 @@ export default function Home() {
             <a className="btn btn-ghost hero-ghost" href="#products" style={{ marginTop: "1rem" }}>
               {t(lang, "Browse products ↓", "浏览产品 ↓")}
             </a>
+
+            <ul className="hero-perks" aria-label={t(lang, "Why choose NOVA", "选择 NOVA 的好处")}>
+              {HERO_PERKS.map((p, i) => (
+                <li key={p.en} className="hero-perk" style={{ "--i": i }}>
+                  <span className="hero-perk-mark" aria-hidden>/</span>
+                  <div>
+                    <p className="hero-perk-line">
+                      {lang === "zh" ? p.zh : p.en}
+                    </p>
+                    <p className="hero-perk-sub">
+                      {lang === "zh" ? p.zhSub : p.enSub}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <form className="hero-quote ts-glass" onSubmit={submit}>
