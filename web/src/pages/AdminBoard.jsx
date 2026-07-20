@@ -21,6 +21,7 @@ export default function AdminBoard() {
   useEffect(load, []);
 
   const filtered = useMemo(() => customers.filter((c) => {
+    if (c.stage === "enquiry") return false;
     if (filter === "deposit_none") return !c.has_deposit && !c.has_full && c.stage !== "lost";
     if (filter === "deposit_paid") return c.has_deposit && !c.has_full;
     if (filter === "full") return c.has_full;

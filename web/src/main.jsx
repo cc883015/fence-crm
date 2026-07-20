@@ -9,6 +9,7 @@ import Login from "./pages/Login.jsx";
 import AdminBoard from "./pages/AdminBoard.jsx";
 import NewCustomerWizard from "./pages/NewCustomerWizard.jsx";
 import CustomerDetail from "./pages/CustomerDetail.jsx";
+import Enquiries from "./pages/Enquiries.jsx";
 import Reports from "./pages/Reports.jsx";
 import "./styles.css";
 
@@ -29,6 +30,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               }
             >
               <Route index element={<AdminBoard />} />
+              <Route path="enquiries" element={<Enquiries />} />
               <Route path="new" element={<NewCustomerWizard />} />
               <Route path="customers/:id" element={<CustomerDetail />} />
               <Route path="reports" element={<Reports />} />

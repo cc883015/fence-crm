@@ -78,6 +78,19 @@ app.post("/api/leads", async (c) => {
   const b = await c.req.json();
   const phone = (b.phone || "").trim();
   const email = (b.email || "").trim();
+  const style = b.fence_type || b.fence_style || "";
+  const gate = (b.gate_required || b.automatic_gate) ? 1 : 0;
+  const answers = {
+    channel: "website",
+    message: b.message || "",
+    fence_type: style,
+    color: b.color || "",
+    fence_length: b.fence_length || "",
+    suburb: b.suburb || "",
+    automatic_gate: !!gate,
+    submitted_at: new Date().toISOString(),
+  };
+  const noteLine = b.message ? `Website message: ${b.message}` : "";
 
   let customer = null;
   if (phone || email) {
@@ -90,32 +103,42 @@ app.post("/api/leads", async (c) => {
   if (customer) {
     customerId = customer.id;
     intake = "duplicate";
+    const mergedNotes = [customer.notes, noteLine].filter(Boolean).join("\n");
+    // Keep pipeline stage; if they were only an unread website enquiry, refresh fields
+    const keepEnquiry = customer.stage === "enquiry";
     await c.env.DB.prepare(
       `UPDATE customers SET
-        name=COALESCE(?1,name), suburb=COALESCE(?2,suburb),
-        source=CASE WHEN source='' OR source IS NULL THEN 'website' ELSE source END,
-        fence_length=COALESCE(NULLIF(?3,''), fence_length),
-        fence_style=COALESCE(NULLIF(?4,''), fence_style),
-        gate_required=CASE WHEN ?5=1 THEN 1 ELSE gate_required END,
-        color=COALESCE(NULLIF(?6,''), color),
-        updated_at=datetime('now') WHERE id=?7`
+        name=COALESCE(NULLIF(?1,''),name),
+        email=COALESCE(NULLIF(?2,''),email),
+        suburb=COALESCE(NULLIF(?3,''),suburb),
+        service_area=COALESCE(NULLIF(?4,''), service_area),
+        fence_length=COALESCE(NULLIF(?5,''), fence_length),
+        fence_style=COALESCE(NULLIF(?6,''), fence_style),
+        gate_required=?7,
+        color=COALESCE(NULLIF(?8,''), color),
+        notes=COALESCE(NULLIF(?9,''), notes),
+        intake_answers=?10,
+        stage=CASE WHEN ?11=1 THEN 'enquiry' ELSE stage END,
+        updated_at=datetime('now') WHERE id=?12`
     ).bind(
-      b.name || null, b.suburb || null, b.fence_length || "", b.fence_type || "",
-      (b.gate_required || b.automatic_gate) ? 1 : 0, b.color || "", customerId
+      b.name || "", email, b.suburb || "", b.suburb || b.service_area || "",
+      b.fence_length || "", style, gate, b.color || "",
+      mergedNotes, JSON.stringify({ ...answers, email }),
+      keepEnquiry ? 1 : 0, customerId
     ).run();
   } else {
     const res = await c.env.DB.prepare(
       `INSERT INTO customers
-        (name, phone, email, suburb, stage, source, fence_length, fence_style, gate_required, color, install_type, slope, intake_answers)
-       VALUES (?1,?2,?3,?4,'new','website',?5,?6,?7,?8,?9,?10,?11)`
+        (name, phone, email, suburb, stage, source, service_area, fence_length, fence_style, gate_required, color, notes, install_type, slope, intake_answers)
+       VALUES (?1,?2,?3,?4,'enquiry','website',?5,?6,?7,?8,?9,?10,?11,?12,?13)`
     ).bind(
       b.name || "", phone, email, b.suburb || "",
-      b.fence_length || "", b.fence_type || "",
-      (b.gate_required || b.automatic_gate) ? 1 : 0,
-      b.color || "",
+      b.suburb || b.service_area || "",
+      b.fence_length || "", style, gate, b.color || "",
+      noteLine,
       b.brick_wall ? "brick" : (b.install_type || ""),
       b.slope || "unknown",
-      JSON.stringify({ channel: "website", message: b.message || "" })
+      JSON.stringify({ ...answers, email })
     ).run();
     customerId = res.meta.last_row_id;
     intake = "new";
@@ -128,15 +151,28 @@ app.post("/api/leads", async (c) => {
      VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)`
   ).bind(
     customerId, b.source || "website", intake, b.name || "", phone, email,
-    b.suburb || "", b.fence_length || "", b.fence_height || "", b.fence_type || "",
-    b.gate_required ? 1 : 0, b.automatic_gate ? 1 : 0, b.brick_wall ? 1 : 0,
+    b.suburb || "", b.fence_length || "", b.fence_height || "", style,
+    gate, gate, b.brick_wall ? 1 : 0,
     b.slope || "unknown", b.budget || "", b.timeline || "",
     JSON.stringify(b.photos || []), b.message || ""
   ).run();
 
+  const summary = [
+    `官网报价提交 (${intake})`,
+    b.name && `Name: ${b.name}`,
+    phone && `Phone: ${phone}`,
+    email && `Email: ${email}`,
+    b.suburb && `Suburb: ${b.suburb}`,
+    b.fence_length && `Length: ${b.fence_length}`,
+    style && `Style: ${style}`,
+    b.color && `Colour: ${b.color}`,
+    `Gate: ${gate ? "Yes" : "No"}`,
+    b.message && `Msg: ${b.message}`,
+  ].filter(Boolean).join(" · ");
+
   await c.env.DB.prepare(
     "INSERT INTO activities (customer_id, type, content) VALUES (?1,'message',?2)"
-  ).bind(customerId, `官网提交(${b.source || "website"})`).run();
+  ).bind(customerId, summary).run();
 
   return c.json({ ok: true, customer_id: customerId, intake_status: intake });
 });
@@ -214,6 +250,9 @@ app.post("/api/customers", async (c) => {
 app.put("/api/customers/:id", async (c) => {
   const id = c.req.param("id");
   const b = await c.req.json();
+  const prev = await c.env.DB.prepare("SELECT * FROM customers WHERE id=?1").bind(id).first();
+  if (!prev) return c.json({ error: "not found" }, 404);
+
   await c.env.DB.prepare(
     `UPDATE customers SET
       name=?1, phone=?2, email=?3, suburb=?4, address=?5, stage=?6, notes=?7, source=?8,
@@ -228,9 +267,49 @@ app.put("/api/customers/:id", async (c) => {
     b.install_type || "", b.fence_style || "", b.color || "",
     b.slope || "unknown", b.dual_estimate ? 1 : 0, b.photo_note || "",
     b.deposit_informed ? 1 : 0, b.service_area || "",
-    JSON.stringify(b.intake_answers || {}), id
+    JSON.stringify(b.intake_answers || safeJson(prev.intake_answers, {})), id
   ).run();
-  return c.json({ ok: true });
+
+  // History: log field changes
+  const watch = [
+    ["stage", "阶段"],
+    ["source", "来源"],
+    ["service_area", "服务区"],
+    ["fence_length", "长度"],
+    ["gate_required", "电动门"],
+    ["gate_width", "门宽"],
+    ["install_type", "安装方式"],
+    ["fence_style", "款式"],
+    ["color", "颜色"],
+    ["slope", "斜坡"],
+    ["dual_estimate", "双估价"],
+    ["photo_note", "照片备注"],
+    ["deposit_informed", "定金说明"],
+    ["name", "姓名"],
+    ["phone", "电话"],
+    ["email", "邮箱"],
+    ["suburb", "Suburb"],
+    ["notes", "备注"],
+  ];
+  const changes = [];
+  for (const [key, label] of watch) {
+    let oldV = prev[key];
+    let newV = b[key];
+    if (key === "gate_required" || key === "dual_estimate" || key === "deposit_informed") {
+      oldV = prev[key] ? 1 : 0;
+      newV = b[key] ? 1 : 0;
+    }
+    const o = oldV == null ? "" : String(oldV);
+    const n = newV == null ? "" : String(newV);
+    if (o !== n) changes.push(`${label}: ${o || "—"} → ${n || "—"}`);
+  }
+  if (changes.length) {
+    await c.env.DB.prepare(
+      "INSERT INTO activities (customer_id, type, content) VALUES (?1,'note',?2)"
+    ).bind(id, `更新客户信息 · ${changes.join("; ")}`).run();
+  }
+
+  return c.json({ ok: true, changes: changes.length });
 });
 
 app.delete("/api/customers/:id", async (c) => {
