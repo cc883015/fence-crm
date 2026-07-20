@@ -136,11 +136,12 @@ export default function NewCustomerWizard() {
               ))}
             </div>
             <div className="field" style={{ marginTop: "0.85rem" }}>
-              <label>Approx. yard length · 院子大概长度</label>
+              <label>Length · 长度（可手动填写，如 25m）</label>
               <input
                 value={data.fence_length}
                 onChange={(e) => set("fence_length", e.target.value)}
-                placeholder="e.g. 22m / 30 metres"
+                placeholder="直接输入，例如 22m / 30 metres"
+                inputMode="text"
               />
             </div>
           </>
