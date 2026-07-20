@@ -1,0 +1,20 @@
+name = "fence-crm"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+# 前端打包产物目录（web/dist），npm run web:build 后生成
+assets = { directory = "./web/dist", binding = "ASSETS", not_found_handling = "single-page-application" }
+
+# ── D1 数据库绑定 ─────────────────────────────
+# 首次使用前，先运行：
+#   wrangler d1 create fence_crm
+# 把返回的 database_id 填到下面，替换 REPLACE_WITH_YOUR_DB_ID
+[[d1_databases]]
+binding = "DB"
+database_name = "fence_crm"
+database_id = "9bae0c0f-2091-4fb9-b9ed-9ee26c09652a"
+
+# ── R2 图片存储（可选，第二期再开）────────────
+# [[r2_buckets]]
+# binding = "PHOTOS"
+# bucket_name = "fence-photos"

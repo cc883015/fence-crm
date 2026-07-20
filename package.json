@@ -1,0 +1,22 @@
+{
+  "name": "fence-crm",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "predev": "mkdir -p web/dist && [ -f web/dist/index.html ] || printf '%s\\n' '<!doctype html><title>fence-crm</title>' > web/dist/index.html",
+    "dev": "wrangler dev",
+    "deploy": "npm run web:build && wrangler deploy",
+    "db:local": "wrangler d1 execute fence_crm --local --file=./migrations/0001_init.sql",
+    "db:seed:local": "wrangler d1 execute fence_crm --local --file=./migrations/0002_seed.sql",
+    "db:remote": "wrangler d1 execute fence_crm --remote --file=./migrations/0001_init.sql",
+    "db:seed:remote": "wrangler d1 execute fence_crm --remote --file=./migrations/0002_seed.sql",
+    "web:dev": "cd web && npm run dev",
+    "web:build": "cd web && npm run build"
+  },
+  "dependencies": {
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "wrangler": "^3.99.0"
+  }
+}
