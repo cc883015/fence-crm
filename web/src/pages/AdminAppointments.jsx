@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api.js";
+import { fuzzyMatch } from "../lib/fuzzy.js";
+
+function apptSortKey(a) {
+  const t = a.appointment_time || "99:99";
+  return `${a.appointment_date || ""}T${t}`;
+}
 
 const empty = {
   name: "",
@@ -150,6 +156,7 @@ export default function AdminAppointments() {
   const [list, setList] = useState([]);
   const [filter, setFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [nameQ, setNameQ] = useState("");
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -163,9 +170,7 @@ export default function AdminAppointments() {
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const load = () => {
-    const q = { weekday: filter };
-    if (statusFilter === "scheduled" || statusFilter === "completed") q.status = statusFilter;
-    api.appointments(q)
+    api.appointments({ weekday: filter })
       .then((rows) => {
         setList(rows);
         setNoteDraft((prev) => {
@@ -180,16 +185,28 @@ export default function AdminAppointments() {
       .catch((e) => setErr(String(e.message || e)));
   };
 
-  useEffect(load, [filter, statusFilter]);
+  useEffect(load, [filter]);
 
   const liveWeekday = weekdayOf(form.appointment_date);
   const invalidDay = form.appointment_date && !liveWeekday;
 
+  const visible = useMemo(() => {
+    const q = nameQ.trim();
+    return list
+      .filter((a) => {
+        if (statusFilter === "scheduled" && a.status === "completed") return false;
+        if (statusFilter === "completed" && a.status !== "completed") return false;
+        if (q && !fuzzyMatch(a.name, q) && !fuzzyMatch(a.phone, q)) return false;
+        return true;
+      })
+      .sort((a, b) => apptSortKey(a).localeCompare(apptSortKey(b)));
+  }, [list, statusFilter, nameQ]);
+
   const filteredHint = useMemo(() => {
     const done = list.filter((a) => a.status === "completed").length;
     const pending = list.filter((a) => a.status !== "completed").length;
-    return { done, pending, total: list.length };
-  }, [list]);
+    return { done, pending, total: list.length, shown: visible.length };
+  }, [list, visible]);
 
   const reset = () => {
     setForm(empty);
@@ -318,11 +335,11 @@ export default function AdminAppointments() {
           <h2 style={{ margin: "0.2rem 0 0" }}>
             周三 / 周六上门测量
             <span className="muted" style={{ fontSize: "1rem", fontWeight: 500 }}>
-              {" "}· {filteredHint.total}
-              <span style={{ marginLeft: "0.5rem" }}>待测 {filteredHint.pending} · 完成 {filteredHint.done}</span>
+              {" "}· 显示 {filteredHint.shown}/{filteredHint.total}
+              <span style={{ marginLeft: "0.5rem" }}>未测 {filteredHint.pending} · 完成 {filteredHint.done}</span>
             </span>
           </h2>
-          <p className="muted">录入客户与预约信息，生成小卡片分享到群；列表可标记测量完成并写备注。</p>
+          <p className="muted">录入客户与预约信息，生成小卡片分享到群；下方列表可搜索、按时间排序、筛选未测/完成。</p>
         </div>
         <div className="toolbar" style={{ margin: 0 }}>
           {["all", "wed", "sat"].map((k) => (
@@ -333,21 +350,6 @@ export default function AdminAppointments() {
               onClick={() => setFilter(k)}
             >
               {k === "all" ? "全部" : k === "wed" ? "周三" : "周六"}
-            </button>
-          ))}
-          <span className="muted" style={{ margin: "0 0.15rem" }}>|</span>
-          {[
-            { id: "all", label: "全部状态" },
-            { id: "scheduled", label: "待测量" },
-            { id: "completed", label: "已完成" },
-          ].map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`btn btn-sm ${statusFilter === s.id ? "btn-primary" : "btn-ghost ts-glass"}`}
-              onClick={() => setStatusFilter(s.id)}
-            >
-              {s.label}
             </button>
           ))}
         </div>
@@ -498,17 +500,55 @@ export default function AdminAppointments() {
         </aside>
       </div>
 
-      <div className="order-table ts-glass" style={{ marginTop: "1rem" }}>
+      <div className="appt-list-tools ts-glass">
+        <div className="search-bar appt-search">
+          <input
+            type="search"
+            value={nameQ}
+            onChange={(e) => setNameQ(e.target.value)}
+            placeholder="搜索客户姓名 / 电话…"
+            aria-label="Search by customer name"
+          />
+          {nameQ && (
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setNameQ("")}>
+              清除
+            </button>
+          )}
+        </div>
+        <div className="toolbar appt-status-filters" style={{ margin: 0 }}>
+          {[
+            { id: "all", label: "所有" },
+            { id: "scheduled", label: "未测量" },
+            { id: "completed", label: "测量完成" },
+          ].map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`btn btn-sm ${statusFilter === s.id ? "btn-primary" : "btn-ghost"}`}
+              onClick={() => setStatusFilter(s.id)}
+            >
+              {s.label}
+            </button>
+          ))}
+          <span className="muted" style={{ fontSize: "0.82rem", marginLeft: "0.25rem" }}>
+            按预约时间排序
+          </span>
+        </div>
+      </div>
+
+      <div className="order-table ts-glass" style={{ marginTop: "0.75rem" }}>
         <div className="order-row order-head appt-row">
           <span>客户 / 电话</span>
           <span>日期 / 状态</span>
           <span>地址 / 备注</span>
           <span></span>
         </div>
-        {list.length === 0 ? (
-          <p className="muted" style={{ padding: "1rem" }}>暂无预约</p>
+        {visible.length === 0 ? (
+          <p className="muted" style={{ padding: "1rem" }}>
+            {list.length === 0 ? "暂无预约" : nameQ || statusFilter !== "all" ? "没有匹配的客户" : "暂无预约"}
+          </p>
         ) : (
-          list.map((a) => {
+          visible.map((a) => {
             const done = a.status === "completed";
             const draft = noteDraft[a.id] ?? a.notes ?? "";
             const noteDirty = draft !== (a.notes || "");

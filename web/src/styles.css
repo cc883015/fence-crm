@@ -1174,6 +1174,28 @@ button, input, select, textarea { font: inherit; }
 }
 
 /* Wed / Sat measurement appointments */
+.appt-list-tools {
+  margin-top: 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.appt-search {
+  flex: 1;
+  min-width: min(100%, 16rem);
+  margin: 0;
+  padding: 0.4rem 0.65rem;
+}
+.appt-status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
 .appt-layout {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
