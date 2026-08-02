@@ -10,6 +10,8 @@
     "db:seed:local": "wrangler d1 execute fence_crm --local --file=./migrations/0002_seed.sql",
     "db:remote": "wrangler d1 execute fence_crm --remote --file=./migrations/0001_init.sql",
     "db:seed:remote": "wrangler d1 execute fence_crm --remote --file=./migrations/0002_seed.sql",
+    "db:appointments:local": "wrangler d1 execute fence_crm --local --file=./migrations/0005_measurement_appointments.sql",
+    "db:appointments:remote": "wrangler d1 execute fence_crm --remote --file=./migrations/0005_measurement_appointments.sql",
     "web:dev": "cd web && npm run dev",
     "web:build": "cd web && npm run build"
   },

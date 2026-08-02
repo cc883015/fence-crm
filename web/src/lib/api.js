@@ -44,4 +44,14 @@ export const api = {
   deleteCustomer: (id) => j("DELETE", `/customers/${id}`, null, true),
   createPayment: (d) => j("POST", "/payments", d, true),
   summary: () => j("GET", "/reports/summary", null, true),
+  appointments: (q = {}) => {
+    const params = new URLSearchParams();
+    if (q.weekday && q.weekday !== "all") params.set("weekday", q.weekday);
+    if (q.status) params.set("status", q.status);
+    const qs = params.toString();
+    return j("GET", `/appointments${qs ? `?${qs}` : ""}`, null, true);
+  },
+  createAppointment: (d) => j("POST", "/appointments", d, true),
+  updateAppointment: (id, d) => j("PUT", `/appointments/${id}`, d, true),
+  deleteAppointment: (id) => j("DELETE", `/appointments/${id}`, null, true),
 };
