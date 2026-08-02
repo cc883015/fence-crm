@@ -1172,3 +1172,63 @@ button, input, select, textarea { font: inherit; }
   .brand span:not(.brand-mark) { max-width: 6.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hero-quick .chip:nth-child(n+3) { display: none; }
 }
+
+/* Wed / Sat measurement appointments */
+.appt-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 1rem;
+  align-items: start;
+}
+.appt-form,
+.appt-card-panel {
+  padding: 1.15rem 1.2rem 1.25rem;
+  border-radius: 1.15rem;
+}
+.maps-link {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: var(--color-brand);
+  font-weight: 650;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+.appt-share-preview {
+  border-radius: 1rem;
+  overflow: hidden;
+  background: oklch(0.2 0.03 255);
+  margin-bottom: 0.75rem;
+}
+.appt-share-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.appt-share-text {
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.75rem;
+  background: oklch(0.97 0.01 255);
+  border: 1px dashed var(--color-border);
+  margin: 0 0 0.75rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+.appt-row {
+  grid-template-columns: 1.1fr 0.9fr 1.3fr auto !important;
+}
+@media (max-width: 900px) {
+  .appt-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .appt-row {
+    grid-template-columns: 1fr !important;
+  }
+  .appt-form,
+  .appt-card-panel { padding: 1rem; }
+}

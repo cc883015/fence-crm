@@ -183,6 +183,8 @@ app.use("/api/customers", requireAuth);
 app.use("/api/payments", requireAuth);
 app.use("/api/payments/*", requireAuth);
 app.use("/api/reports/*", requireAuth);
+app.use("/api/appointments/*", requireAuth);
+app.use("/api/appointments", requireAuth);
 app.use("/api/leads", async (c, next) => {
   if (c.req.method === "GET") return requireAuth(c, next);
   return next();
@@ -339,6 +341,119 @@ app.post("/api/payments", async (c) => {
     "INSERT INTO activities (customer_id, type, content) VALUES (?1,?2,?3)"
   ).bind(b.customer_id, b.type === "deposit" ? "deposit_paid" : "note", `${b.type} ${b.status} $${b.amount}`).run();
   return c.json({ ok: true, id: res.meta.last_row_id });
+});
+
+function mapsUrl(address) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || "")}`;
+}
+
+function weekdayFromDate(dateStr) {
+  const d = new Date(`${dateStr}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  const n = d.getDay(); // 0 Sun … 6 Sat
+  if (n === 3) return "wed";
+  if (n === 6) return "sat";
+  return "";
+}
+
+function mapAppointment(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    maps_url: mapsUrl(row.address),
+  };
+}
+
+app.get("/api/appointments", async (c) => {
+  const weekday = c.req.query("weekday"); // wed | sat | all
+  const status = c.req.query("status");
+  const clauses = [];
+  const binds = [];
+  if (weekday === "wed" || weekday === "sat") {
+    clauses.push(`weekday=?${binds.length + 1}`);
+    binds.push(weekday);
+  }
+  if (status) {
+    clauses.push(`status=?${binds.length + 1}`);
+    binds.push(status);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  const { results } = await c.env.DB.prepare(
+    `SELECT * FROM measurement_appointments ${where} ORDER BY appointment_date ASC, appointment_time ASC, id DESC`
+  ).bind(...binds).all();
+  return c.json(results.map(mapAppointment));
+});
+
+app.get("/api/appointments/:id", async (c) => {
+  const row = await c.env.DB.prepare(
+    "SELECT * FROM measurement_appointments WHERE id=?1"
+  ).bind(c.req.param("id")).first();
+  if (!row) return c.json({ error: "not found" }, 404);
+  return c.json(mapAppointment(row));
+});
+
+app.post("/api/appointments", async (c) => {
+  const b = await c.req.json();
+  const name = (b.name || "").trim();
+  const phone = (b.phone || "").trim();
+  const address = (b.address || "").trim();
+  const appointment_date = (b.appointment_date || "").trim();
+  const appointment_time = (b.appointment_time || "").trim();
+  const email = (b.email || "").trim();
+  const notes = (b.notes || "").trim();
+  if (!name || !phone || !address || !appointment_date) {
+    return c.json({ error: "name, phone, address, appointment_date required" }, 400);
+  }
+  const weekday = weekdayFromDate(appointment_date);
+  if (!weekday) {
+    return c.json({ error: "appointment_date must be a Wednesday or Saturday" }, 400);
+  }
+  const res = await c.env.DB.prepare(
+    `INSERT INTO measurement_appointments
+      (name, phone, email, appointment_date, weekday, appointment_time, address, notes, status)
+     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,'scheduled')`
+  ).bind(name, phone, email, appointment_date, weekday, appointment_time, address, notes).run();
+  const row = await c.env.DB.prepare(
+    "SELECT * FROM measurement_appointments WHERE id=?1"
+  ).bind(res.meta.last_row_id).first();
+  return c.json(mapAppointment(row));
+});
+
+app.put("/api/appointments/:id", async (c) => {
+  const id = c.req.param("id");
+  const prev = await c.env.DB.prepare(
+    "SELECT * FROM measurement_appointments WHERE id=?1"
+  ).bind(id).first();
+  if (!prev) return c.json({ error: "not found" }, 404);
+  const b = await c.req.json();
+  const name = String(b.name ?? prev.name ?? "").trim();
+  const phone = String(b.phone ?? prev.phone ?? "").trim();
+  const address = String(b.address ?? prev.address ?? "").trim();
+  const appointment_date = String(b.appointment_date ?? prev.appointment_date ?? "").trim();
+  const appointment_time = String(b.appointment_time ?? prev.appointment_time ?? "").trim();
+  const email = String(b.email ?? prev.email ?? "").trim();
+  const notes = String(b.notes ?? prev.notes ?? "").trim();
+  const status = String(b.status ?? prev.status ?? "scheduled").trim();
+  const weekday = weekdayFromDate(appointment_date);
+  if (!weekday) {
+    return c.json({ error: "appointment_date must be a Wednesday or Saturday" }, 400);
+  }
+  await c.env.DB.prepare(
+    `UPDATE measurement_appointments SET
+      name=?1, phone=?2, email=?3, appointment_date=?4, weekday=?5,
+      appointment_time=?6, address=?7, notes=?8, status=?9,
+      updated_at=datetime('now')
+     WHERE id=?10`
+  ).bind(name, phone, email, appointment_date, weekday, appointment_time, address, notes, status, id).run();
+  const row = await c.env.DB.prepare(
+    "SELECT * FROM measurement_appointments WHERE id=?1"
+  ).bind(id).first();
+  return c.json(mapAppointment(row));
+});
+
+app.delete("/api/appointments/:id", async (c) => {
+  await c.env.DB.prepare("DELETE FROM measurement_appointments WHERE id=?1").bind(c.req.param("id")).run();
+  return c.json({ ok: true });
 });
 
 app.get("/api/reports/summary", async (c) => {

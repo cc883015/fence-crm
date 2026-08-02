@@ -25,6 +25,9 @@ export default function AdminLayout() {
           <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/enquiries">
             新资讯 Enquiries
           </NavLink>
+          <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/appointments">
+            量尺 Measure
+          </NavLink>
           <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/new">
             新客户 New
           </NavLink>
