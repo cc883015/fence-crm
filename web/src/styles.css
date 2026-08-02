@@ -1220,7 +1220,80 @@ button, input, select, textarea { font: inherit; }
   overflow: auto;
 }
 .appt-row {
-  grid-template-columns: 1.1fr 0.9fr 1.3fr auto !important;
+  grid-template-columns: 1.1fr 0.95fr 1.45fr auto !important;
+  align-items: start !important;
+}
+.appt-row.appt-done {
+  background: oklch(0.97 0.02 145 / 0.55);
+}
+.appt-status {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.appt-status.is-pending {
+  background: oklch(0.94 0.03 85);
+  color: oklch(0.4 0.06 85);
+}
+.appt-status.is-done {
+  background: oklch(0.92 0.05 145);
+  color: oklch(0.35 0.08 145);
+}
+.appt-addr-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.appt-note-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+.appt-note-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  font: inherit;
+  font-size: 0.85rem;
+  background: oklch(0.99 0.005 255);
+}
+.appt-note-input:focus {
+  outline: 2px solid color-mix(in oklch, var(--color-gold) 45%, transparent);
+  border-color: transparent;
+}
+.appt-done-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.appt-done-check.compact {
+  margin: 0;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  padding: 0.25rem 0.45rem;
+  border-radius: 999px;
+  background: oklch(0.96 0.01 255);
+  border: 1px solid var(--color-border);
+}
+.appt-done-check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-brand);
+}
+.appt-actions {
+  flex-wrap: wrap;
+  align-items: center;
 }
 @media (max-width: 900px) {
   .appt-layout { grid-template-columns: 1fr; }
@@ -1231,4 +1304,5 @@ button, input, select, textarea { font: inherit; }
   }
   .appt-form,
   .appt-card-panel { padding: 1rem; }
+  .appt-note-input { font-size: 16px; min-height: 2.5rem; }
 }
