@@ -1,0 +1,15 @@
+---
+description: After each feature change, open an English GitHub issue + PR (human tone)
+alwaysApply: true
+---
+
+# GitHub issue / PR workflow
+
+For every discrete feature or fix in this repo:
+
+1. Implement and smoke-test (API and/or build) before opening GitHub items.
+2. Create an **English** GitHub issue and PR; link with `Closes #N`.
+3. Apply labels (`crm`, `ui`, `website`, `mobile`, `api`, `infra`, `enhancement` as fits).
+4. Commit messages and PR/issue text must read like a normal developer wrote them — short, concrete, no AI filler, no mention of Cursor/Copilot/ChatGPT.
+5. PR body: what changed, how you checked it, a short manual checklist. Skip generic “Summary / Test plan” fluff when a tighter note is clearer.
+6. Prefer stacking PRs on the current feature tip when the change depends on unmerged work; otherwise open against `main`.
