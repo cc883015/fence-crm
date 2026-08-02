@@ -1,62 +1,119 @@
 import React from "react";
-import { CATALOGUE, CONTACT } from "../data/products.js";
 
-/** Rough guide prices for phone quotes — AUD, ex GST unless noted */
-const PRICE_ROWS = [
+/** Unit prices from NOVA Fence quotes / Xero (AUD, before GST unless noted). */
+const SECTIONS = [
   {
-    slug: "blade",
-    unit: "per metre (supply + install guide)",
-    black: "$180–$220 / m",
-    grey: "$180–$220 / m",
-    note: "1.5mm · 40mm gap · common privacy pick",
+    id: "fences-gates",
+    title_zh: "栅栏 & 门",
+    title_en: "Fences & Gates",
+    rows: [
+      {
+        code: "HF2B00",
+        desc_zh: "横板围栏 · 2400×1185 · Black Gloss · Full Pack",
+        desc_en: "Horizontal slat fence - 2400*1185 - Black Gloss - Full Pack",
+        price: 339.9,
+      },
+      {
+        code: "HD8B00",
+        desc_zh: "横板侧门 · 1000×1800 · Black Gloss · Full Pack",
+        desc_en: "Horizontal slat side gate - 1000*1800 - Black Gloss - Full Pack",
+        price: 482.9,
+      },
+      {
+        code: "—",
+        desc_zh: "横板推拉门 · 6000mm",
+        desc_en: "Horizontal Slat Sliding Gate 6000mm Gate",
+        price: 4400,
+      },
+      {
+        code: "—",
+        desc_zh: "横板推拉门 · 4500×1800 · Black（双开定制）",
+        desc_en: "Horizontal slat Sliding gate - 4500*1800 - Black (double gate, custom)",
+        price: 3630,
+      },
+    ],
   },
   {
-    slug: "decorative",
-    unit: "per metre (supply + install guide)",
-    black: "$190–$230 / m",
-    grey: "$190–$230 / m",
-    note: "1.2mm · 35mm gap · tighter look",
+    id: "posts",
+    title_zh: "立柱 Posts",
+    title_en: "Posts",
+    rows: [
+      {
+        code: "FP4B00",
+        desc_zh: "埋地柱 · 65×65×2400 · Black Gloss · Full Pack",
+        desc_en: "Inground post - 65*65*2400 - Black Gloss - Full Pack",
+        price: 59,
+      },
+      {
+        code: "OP5B00",
+        desc_zh: "侧门柱 · 50×50×1900 · Black Gloss · Full Pack",
+        desc_en: "Side gate post - 50*50*1900 - Black Gloss - Full Pack",
+        price: 60.5,
+      },
+      {
+        code: "B00",
+        desc_zh: "推拉门柱 · 100×100×1950 · Black Gloss · Full Pack",
+        desc_en: "Sliding gate post - 100*100*1950 - Black Gloss - Full Pack",
+        price: 308,
+      },
+    ],
   },
   {
-    slug: "horizontal",
-    unit: "per metre (supply + install guide)",
-    black: "$200–$240 / m",
-    grey: "$200–$240 / m",
-    note: "1.2mm · 15mm gap · max privacy",
+    id: "hardware",
+    title_zh: "配件 Hardware",
+    title_en: "Parts & accessories",
+    rows: [
+      {
+        code: "fenceparts",
+        desc_zh: "围栏支架 40×40 · 四只装 + 12 螺丝",
+        desc_en: "Fence Brackets (40 x 40mm) - Pack of Four, including 12 screws",
+        price: 22,
+      },
+      {
+        code: "1138",
+        desc_zh: "铰链 Hinges",
+        desc_en: "hinges",
+        price: 42.46,
+      },
+      {
+        code: "1139",
+        desc_zh: "锁 Lock",
+        desc_en: "lock",
+        price: 117.13,
+      },
+      {
+        code: "S1",
+        desc_zh: "推拉门配件套装",
+        desc_en: "Sliding Gate Accessories — Track rail ($60) + Base Wheel ($88) + Stopper ($20) + Guide ($20) + Buffer Lock ($10)",
+        price: 217.8,
+      },
+    ],
   },
   {
-    slug: "vertical-batten",
-    unit: "per metre (supply + install guide)",
-    black: "$170–$210 / m",
-    grey: "$170–$210 / m",
-    note: "1.2mm · 40mm gap · clean lines",
-  },
-  {
-    slug: "pedestrian-gate",
-    unit: "each (ready stock guide)",
-    black: "$450–$650",
-    grey: "$450–$650",
-    note: "Matching style · colour to fence",
-  },
-  {
-    slug: "brick-pillar",
-    unit: "per job (guide only)",
-    black: "POA",
-    grey: "POA",
-    note: "Brick + fence to ground · site dependent",
+    id: "services",
+    title_zh: "安装服务",
+    title_en: "Services",
+    rows: [
+      {
+        code: "INSTALL",
+        desc_zh: "安装费（按项目）",
+        desc_en: "Installation Service",
+        price: 1500,
+        note: "Site dependent · confirm per job",
+      },
+    ],
   },
 ];
 
-const EXTRAS = [
-  { zh: "电动门（车道 4–6m）", en: "Auto gate 4–6m driveway", price: "POA · usually $3.5k–$7k+" },
-  { zh: "$200 定金", en: "Deposit", price: "$200 · price match after measure" },
-  { zh: "斜坡 / 异形", en: "Slope / custom", price: "+10–25% guide" },
-  { zh: "服务区域", en: "Service area", price: CONTACT.areas.join(" · ") },
-];
+function money(n) {
+  return n.toLocaleString("en-AU", {
+    style: "currency",
+    currency: "AUD",
+    minimumFractionDigits: 2,
+  });
+}
 
 export default function PriceGuide() {
-  const bySlug = Object.fromEntries(CATALOGUE.map((p) => [p.slug, p]));
-
   return (
     <div className="orders-main">
       <div className="orders-head">
@@ -64,49 +121,52 @@ export default function PriceGuide() {
           <p className="ts-eyebrow">Quick quote · 报价参考</p>
           <h2 style={{ margin: "0.2rem 0 0" }}>常见产品报价参考</h2>
           <p className="muted">
-            电话粗估用。最终以测量后正式报价为准 · AUD guide only, confirm on site.
+            来自 NOVA 报价单 / Xero 单价（AUD，未含 GST；GST +10%）。电话粗估用，以实测正式报价为准。
           </p>
         </div>
       </div>
 
-      <div className="price-table ts-glass">
-        <div className="price-row price-head">
-          <span>产品</span>
-          <span>Black</span>
-          <span>Grey</span>
-          <span>备注</span>
-        </div>
-        {PRICE_ROWS.map((row) => {
-          const p = bySlug[row.slug] || {};
-          return (
-            <div key={row.slug} className="price-row">
-              <span>
-                <strong>{p.name_zh || row.slug}</strong>
-                <br />
-                <span className="muted">{p.name_en}</span>
-                <br />
-                <span className="muted" style={{ fontSize: "0.78rem" }}>{row.unit}</span>
-              </span>
-              <span className="price-num">{row.black}</span>
-              <span className="price-num">{row.grey}</span>
-              <span className="muted">{row.note}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="price-extras ts-glass">
-        <h3 style={{ margin: "0 0 0.65rem" }}>其他常见项</h3>
-        {EXTRAS.map((x) => (
-          <div key={x.en} className="price-extra-row">
-            <span>
-              <strong>{x.zh}</strong>
-              <span className="muted"> · {x.en}</span>
-            </span>
-            <span className="price-num">{x.price}</span>
+      {SECTIONS.map((sec) => (
+        <section key={sec.id} className={`price-section ts-glass ${sec.id === "fences-gates" ? "price-section-priority" : ""}`}>
+          <div className="price-section-head">
+            <h3>
+              {sec.title_zh}
+              <span className="muted"> · {sec.title_en}</span>
+            </h3>
           </div>
-        ))}
-      </div>
+          <div className="price-table">
+            <div className="price-row price-head">
+              <span>Item</span>
+              <span>Description</span>
+              <span>Unit Price</span>
+              <span>GST</span>
+            </div>
+            {sec.rows.map((row) => (
+              <div key={`${row.code}-${row.desc_en}`} className="price-row">
+                <span className="price-code">{row.code}</span>
+                <span>
+                  <strong>{row.desc_zh}</strong>
+                  <br />
+                  <span className="muted">{row.desc_en}</span>
+                  {row.note && (
+                    <>
+                      <br />
+                      <span className="muted" style={{ fontSize: "0.78rem" }}>{row.note}</span>
+                    </>
+                  )}
+                </span>
+                <span className="price-num">{money(row.price)}</span>
+                <span className="muted">10%</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      <p className="muted" style={{ marginTop: "0.85rem", fontSize: "0.85rem" }}>
+        Notes: Sliding gate accessories kit breakdown — Track rail $60 · Base Wheel $88 · Stopper $20 · Guide $20 · Buffer Lock $10 (= $217.80).
+        Custom double-gate posts may match B00 unit price. Xero may show slightly different list prices on some SKUs — confirm before locking a quote.
+      </p>
     </div>
   );
 }

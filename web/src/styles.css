@@ -703,21 +703,34 @@ button, input, select, textarea { font: inherit; }
   color: var(--color-ink-soft);
 }
 
-.price-table {
+.price-section {
+  margin-bottom: 0.85rem;
+  padding: 0.85rem 0.9rem 1rem;
   border-radius: 1.15rem;
-  padding: 0.4rem;
+}
+.price-section-priority {
+  border: 1.5px solid oklch(0.55 0.18 25 / 0.45);
+  box-shadow: 0 0 0 1px oklch(0.94 0.03 25);
+}
+.price-section-head h3 {
+  margin: 0 0 0.55rem;
+  font-size: 1.05rem;
+}
+.price-table {
+  border-radius: 0.85rem;
   overflow: hidden;
 }
 .price-row {
   display: grid;
-  grid-template-columns: 1.4fr 0.9fr 0.9fr 1.2fr;
+  grid-template-columns: 6.5rem 1.6fr 7rem 3.5rem;
   gap: 0.65rem;
   align-items: start;
-  padding: 0.85rem 0.9rem;
-  border-radius: 0.75rem;
+  padding: 0.75rem 0.65rem;
+  border-radius: 0.65rem;
   font-size: 0.9rem;
 }
-.price-row + .price-row { margin-top: 0.15rem; }
+.price-row + .price-row { margin-top: 0.1rem; }
+.price-row:not(.price-head):hover { background: oklch(0.97 0.01 255); }
 .price-head {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
@@ -725,28 +738,25 @@ button, input, select, textarea { font: inherit; }
   color: var(--color-ink-faint);
   font-weight: 700;
 }
+.price-code {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+}
 .price-num {
   font-weight: 750;
   color: #b71c1c;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.price-extras {
-  margin-top: 0.85rem;
-  padding: 1.1rem 1.2rem;
-  border-radius: 1.15rem;
-}
-.price-extra-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.92rem;
-}
-.price-extra-row:last-child { border-bottom: 0; }
 @media (max-width: 800px) {
-  .price-row { grid-template-columns: 1fr 1fr; }
+  .price-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+  }
   .price-head { display: none; }
+  .price-code { grid-column: 1 / -1; }
 }
 
 .statrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
