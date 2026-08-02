@@ -9,6 +9,7 @@ const empty = {
   appointment_time: "",
   address: "",
   notes: "",
+  status: "scheduled",
 };
 
 const WEEKDAY_ZH = { wed: "周三", sat: "周六" };
@@ -56,7 +57,8 @@ function shareText(a) {
   ];
   if (a.email) lines.push(`邮箱：${a.email}`);
   if (a.notes) lines.push(`备注：${a.notes}`);
-  lines.push("————————————", "请准时上门测量");
+  lines.push(`状态：${a.status === "completed" ? "测量完成 ✓" : "待测量"}`);
+  lines.push("————————————", a.status === "completed" ? "测量已完成" : "请准时上门测量");
   return lines.join("\n");
 }
 
@@ -147,40 +149,51 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 export default function AdminAppointments() {
   const [list, setList] = useState([]);
   const [filter, setFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [preview, setPreview] = useState(null);
+  const [noteDraft, setNoteDraft] = useState({});
+  const [savingId, setSavingId] = useState(null);
   const canvasRef = useRef(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const load = () => {
-    api.appointments({ weekday: filter })
+    const q = { weekday: filter };
+    if (statusFilter === "scheduled" || statusFilter === "completed") q.status = statusFilter;
+    api.appointments(q)
       .then((rows) => {
         setList(rows);
+        setNoteDraft((prev) => {
+          const next = { ...prev };
+          rows.forEach((r) => {
+            if (next[r.id] === undefined) next[r.id] = r.notes || "";
+          });
+          return next;
+        });
         setErr("");
       })
       .catch((e) => setErr(String(e.message || e)));
   };
 
-  useEffect(load, [filter]);
+  useEffect(load, [filter, statusFilter]);
 
   const liveWeekday = weekdayOf(form.appointment_date);
   const invalidDay = form.appointment_date && !liveWeekday;
 
   const filteredHint = useMemo(() => {
-    const wed = list.filter((a) => a.weekday === "wed").length;
-    const sat = list.filter((a) => a.weekday === "sat").length;
-    return { wed, sat, total: list.length };
+    const done = list.filter((a) => a.status === "completed").length;
+    const pending = list.filter((a) => a.status !== "completed").length;
+    return { done, pending, total: list.length };
   }, [list]);
 
   const reset = () => {
     setForm(empty);
     setEditingId(null);
-    setPreview(null);
     setOk("");
   };
 
@@ -218,9 +231,39 @@ export default function AdminAppointments() {
       appointment_time: a.appointment_time || "",
       address: a.address || "",
       notes: a.notes || "",
+      status: a.status || "scheduled",
     });
     setPreview(a);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const patchRow = async (a, patch) => {
+    setSavingId(a.id);
+    setErr("");
+    try {
+      const row = await api.updateAppointment(a.id, { ...a, ...patch });
+      setList((rows) => rows.map((r) => (r.id === a.id ? row : r)));
+      if (preview?.id === a.id) setPreview(row);
+      if (patch.notes !== undefined) {
+        setNoteDraft((d) => ({ ...d, [a.id]: row.notes || "" }));
+      }
+      setOk(patch.status === "completed" ? "已标记测量完成" : patch.status === "scheduled" ? "已改回待测量" : "备注已保存");
+    } catch (ex) {
+      setErr(String(ex.message || ex));
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const toggleDone = (a) => {
+    const next = a.status === "completed" ? "scheduled" : "completed";
+    patchRow(a, { status: next });
+  };
+
+  const saveNotes = (a) => {
+    const notes = (noteDraft[a.id] ?? a.notes ?? "").trim();
+    if (notes === (a.notes || "")) return;
+    patchRow(a, { notes });
   };
 
   const remove = async (a) => {
@@ -274,9 +317,12 @@ export default function AdminAppointments() {
           <p className="ts-eyebrow">Wed / Sat · Site measure</p>
           <h2 style={{ margin: "0.2rem 0 0" }}>
             周三 / 周六上门测量
-            <span className="muted" style={{ fontSize: "1rem", fontWeight: 500 }}> · {filteredHint.total}</span>
+            <span className="muted" style={{ fontSize: "1rem", fontWeight: 500 }}>
+              {" "}· {filteredHint.total}
+              <span style={{ marginLeft: "0.5rem" }}>待测 {filteredHint.pending} · 完成 {filteredHint.done}</span>
+            </span>
           </h2>
-          <p className="muted">录入客户与预约信息，生成小卡片分享到群；地址可一键打开 Google Maps。</p>
+          <p className="muted">录入客户与预约信息，生成小卡片分享到群；列表可标记测量完成并写备注。</p>
         </div>
         <div className="toolbar" style={{ margin: 0 }}>
           {["all", "wed", "sat"].map((k) => (
@@ -287,6 +333,21 @@ export default function AdminAppointments() {
               onClick={() => setFilter(k)}
             >
               {k === "all" ? "全部" : k === "wed" ? "周三" : "周六"}
+            </button>
+          ))}
+          <span className="muted" style={{ margin: "0 0.15rem" }}>|</span>
+          {[
+            { id: "all", label: "全部状态" },
+            { id: "scheduled", label: "待测量" },
+            { id: "completed", label: "已完成" },
+          ].map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`btn btn-sm ${statusFilter === s.id ? "btn-primary" : "btn-ghost ts-glass"}`}
+              onClick={() => setStatusFilter(s.id)}
+            >
+              {s.label}
             </button>
           ))}
         </div>
@@ -361,8 +422,21 @@ export default function AdminAppointments() {
             </div>
             <div className="field" style={{ gridColumn: "1 / -1" }}>
               <label>备注（可选）</label>
-              <input value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="门禁 / 停车等" />
+              <textarea
+                value={form.notes}
+                onChange={(e) => set("notes", e.target.value)}
+                placeholder="门禁 / 停车 / 现场情况等"
+                rows={2}
+              />
             </div>
+            <label className="appt-done-check">
+              <input
+                type="checkbox"
+                checked={form.status === "completed"}
+                onChange={(e) => set("status", e.target.checked ? "completed" : "scheduled")}
+              />
+              测量完成 · Measurement completed
+            </label>
           </div>
 
           <div className="toolbar" style={{ marginTop: "0.85rem" }}>
@@ -427,52 +501,92 @@ export default function AdminAppointments() {
       <div className="order-table ts-glass" style={{ marginTop: "1rem" }}>
         <div className="order-row order-head appt-row">
           <span>客户 / 电话</span>
-          <span>日期 / 周几</span>
-          <span>地址</span>
+          <span>日期 / 状态</span>
+          <span>地址 / 备注</span>
           <span></span>
         </div>
         {list.length === 0 ? (
           <p className="muted" style={{ padding: "1rem" }}>暂无预约</p>
         ) : (
-          list.map((a) => (
-            <div key={a.id} className="order-row appt-row">
-              <span>
-                <strong>{a.name}</strong>
-                <br />
-                <span className="muted">{a.phone}{a.email ? ` · ${a.email}` : ""}</span>
-              </span>
-              <span>
-                {formatDateZh(a.appointment_date)}
-                <br />
-                <span className="muted">
-                  {WEEKDAY_ZH[a.weekday] || a.weekday}
-                  {a.appointment_time ? ` · ${a.appointment_time}` : ""}
+          list.map((a) => {
+            const done = a.status === "completed";
+            const draft = noteDraft[a.id] ?? a.notes ?? "";
+            const noteDirty = draft !== (a.notes || "");
+            return (
+              <div key={a.id} className={`order-row appt-row ${done ? "appt-done" : ""}`}>
+                <span>
+                  <strong>{a.name}</strong>
+                  <br />
+                  <span className="muted">{a.phone}{a.email ? ` · ${a.email}` : ""}</span>
                 </span>
-              </span>
-              <span>
-                <a
-                  className="maps-link"
-                  href={a.maps_url || mapsUrl(a.address)}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {a.address}
-                </a>
-              </span>
-              <span className="order-actions" onClick={(e) => e.stopPropagation()}>
-                <button type="button" className="btn btn-sm btn-primary" onClick={() => openCard(a)}>
-                  卡片
-                </button>
-                <button type="button" className="btn btn-sm btn-ghost" onClick={() => edit(a)}>
-                  编辑
-                </button>
-                <button type="button" className="btn btn-sm btn-ghost" onClick={() => remove(a)}>
-                  删除
-                </button>
-              </span>
-            </div>
-          ))
+                <span>
+                  {formatDateZh(a.appointment_date)}
+                  <br />
+                  <span className="muted">
+                    {WEEKDAY_ZH[a.weekday] || a.weekday}
+                    {a.appointment_time ? ` · ${a.appointment_time}` : ""}
+                  </span>
+                  <br />
+                  <span className={`appt-status ${done ? "is-done" : "is-pending"}`}>
+                    {done ? "测量完成" : "待测量"}
+                  </span>
+                </span>
+                <span className="appt-addr-notes">
+                  <a
+                    className="maps-link"
+                    href={a.maps_url || mapsUrl(a.address)}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {a.address}
+                  </a>
+                  <div className="appt-note-row" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      className="appt-note-input"
+                      value={draft}
+                      placeholder="添加备注…"
+                      onChange={(e) => setNoteDraft((d) => ({ ...d, [a.id]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveNotes(a);
+                      }}
+                      onBlur={() => saveNotes(a)}
+                    />
+                    {noteDirty && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        disabled={savingId === a.id}
+                        onClick={() => saveNotes(a)}
+                      >
+                        存
+                      </button>
+                    )}
+                  </div>
+                </span>
+                <span className="order-actions appt-actions" onClick={(e) => e.stopPropagation()}>
+                  <label className="appt-done-check compact">
+                    <input
+                      type="checkbox"
+                      checked={done}
+                      disabled={savingId === a.id}
+                      onChange={() => toggleDone(a)}
+                    />
+                    完成
+                  </label>
+                  <button type="button" className="btn btn-sm btn-primary" onClick={() => openCard(a)}>
+                    卡片
+                  </button>
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => edit(a)}>
+                    编辑
+                  </button>
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => remove(a)}>
+                    删除
+                  </button>
+                </span>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

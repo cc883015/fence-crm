@@ -401,6 +401,7 @@ app.post("/api/appointments", async (c) => {
   const appointment_time = (b.appointment_time || "").trim();
   const email = (b.email || "").trim();
   const notes = (b.notes || "").trim();
+  const status = b.status === "completed" ? "completed" : "scheduled";
   if (!name || !phone || !address || !appointment_date) {
     return c.json({ error: "name, phone, address, appointment_date required" }, 400);
   }
@@ -411,8 +412,8 @@ app.post("/api/appointments", async (c) => {
   const res = await c.env.DB.prepare(
     `INSERT INTO measurement_appointments
       (name, phone, email, appointment_date, weekday, appointment_time, address, notes, status)
-     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,'scheduled')`
-  ).bind(name, phone, email, appointment_date, weekday, appointment_time, address, notes).run();
+     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)`
+  ).bind(name, phone, email, appointment_date, weekday, appointment_time, address, notes, status).run();
   const row = await c.env.DB.prepare(
     "SELECT * FROM measurement_appointments WHERE id=?1"
   ).bind(res.meta.last_row_id).first();
