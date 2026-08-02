@@ -11,6 +11,8 @@ import NewCustomerWizard from "./pages/NewCustomerWizard.jsx";
 import CustomerDetail from "./pages/CustomerDetail.jsx";
 import Enquiries from "./pages/Enquiries.jsx";
 import AdminAppointments from "./pages/AdminAppointments.jsx";
+import DailyChecklist from "./pages/DailyChecklist.jsx";
+import PriceGuide from "./pages/PriceGuide.jsx";
 import Reports from "./pages/Reports.jsx";
 import "./styles.css";
 
@@ -31,6 +33,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               }
             >
               <Route index element={<AdminBoard />} />
+              <Route path="checklist" element={<DailyChecklist />} />
+              <Route path="prices" element={<PriceGuide />} />
               <Route path="enquiries" element={<Enquiries />} />
               <Route path="appointments" element={<AdminAppointments />} />
               <Route path="new" element={<NewCustomerWizard />} />

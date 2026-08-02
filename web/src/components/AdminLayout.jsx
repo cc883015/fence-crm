@@ -19,14 +19,35 @@ export default function AdminLayout() {
           <span>NOVA CRM</span>
         </Link>
         <div className="admin-links">
+          <div className="admin-priority-group" aria-label="Daily tools">
+            <NavLink
+              className={({ isActive }) => (isActive ? "navlink on" : "navlink")}
+              to="/admin/checklist"
+            >
+              每日必查清单
+            </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                `navlink navlink-alert${isActive ? " on" : ""}`
+              }
+              to="/admin/prices"
+            >
+              常见产品报价参考
+            </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                `navlink navlink-alert${isActive ? " on" : ""}`
+              }
+              to="/admin/appointments"
+            >
+              测量
+            </NavLink>
+          </div>
           <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin" end>
             订单 Orders
           </NavLink>
           <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/enquiries">
             新资讯 Enquiries
-          </NavLink>
-          <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/appointments">
-            量尺 Measure
           </NavLink>
           <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/new">
             新客户 New
