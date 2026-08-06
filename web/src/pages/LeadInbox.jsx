@@ -48,6 +48,7 @@ export default function LeadInbox() {
   const [uploading, setUploading] = useState(null);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
+  const [viewer, setViewer] = useState(null); // { src, name, list, index }
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -146,7 +147,10 @@ export default function LeadInbox() {
             来客跟进
             <span className="muted" style={{ fontSize: "1rem", fontWeight: 500 }}> · {list.length}</span>
           </h2>
-          <p className="muted">从各平台复制客户信息粘贴进来。按录入时间排序，状态可筛选，照片在行末上传。</p>
+          <p className="muted">
+            从各平台复制客户信息粘贴进来。按录入时间排序，状态可筛选，照片在行末上传。
+            照片点缩略图可放大；目前存在 D1 数据库里，单条约 6 张、每张压缩后约几十到一两百 KB——量不大够用，量大了建议改存 Cloudflare R2。
+          </p>
         </div>
       </div>
 
@@ -313,21 +317,35 @@ export default function LeadInbox() {
 
               <div className="inbox-photos">
                 <div className="inbox-photo-grid">
-                  {(row.photos || []).map((p) => (
+                  {(row.photos || []).map((p, pi) => (
                     <div key={p.id} className="inbox-photo">
-                      <img src={p.dataUrl} alt={p.name || "photo"} />
+                      <button
+                        type="button"
+                        className="inbox-photo-open"
+                        onClick={() => setViewer({
+                          list: row.photos || [],
+                          index: pi,
+                          name: p.name,
+                          src: p.dataUrl,
+                        })}
+                        title="点击放大"
+                      >
+                        <img src={p.dataUrl} alt={p.name || "photo"} />
+                      </button>
                       <button type="button" className="inbox-photo-x" onClick={() => removePhoto(row, p.id)} aria-label="Remove photo">×</button>
                     </div>
                   ))}
                 </div>
                 <label className={`btn btn-sm btn-primary inbox-upload ${uploading === row.id ? "disabled" : ""}`}>
-                  {uploading === row.id ? "上传中…" : "Upload 照片"}
+                  {uploading === row.id
+                    ? "上传中…"
+                    : `Upload 照片 (${(row.photos || []).length}/6)`}
                   <input
                     type="file"
                     accept="image/*"
                     multiple
                     hidden
-                    disabled={uploading === row.id}
+                    disabled={uploading === row.id || (row.photos || []).length >= 6}
                     onChange={(e) => {
                       onUpload(row, e.target.files);
                       e.target.value = "";
@@ -339,6 +357,72 @@ export default function LeadInbox() {
           ))
         )}
       </div>
+
+      {viewer && (
+        <div
+          className="photo-lightbox"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setViewer(null)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setViewer(null);
+            if (e.key === "ArrowRight" && viewer.list[viewer.index + 1]) {
+              const n = viewer.index + 1;
+              setViewer({ ...viewer, index: n, src: viewer.list[n].dataUrl, name: viewer.list[n].name });
+            }
+            if (e.key === "ArrowLeft" && viewer.list[viewer.index - 1]) {
+              const n = viewer.index - 1;
+              setViewer({ ...viewer, index: n, src: viewer.list[n].dataUrl, name: viewer.list[n].name });
+            }
+          }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+        >
+          <div className="photo-lightbox-inner" onClick={(e) => e.stopPropagation()}>
+            <img src={viewer.src} alt={viewer.name || "photo"} />
+            <div className="photo-lightbox-bar">
+              <span className="muted">
+                {(viewer.index ?? 0) + 1}/{viewer.list?.length || 1}
+                {viewer.name ? ` · ${viewer.name}` : ""}
+              </span>
+              <div className="toolbar" style={{ margin: 0 }}>
+                {viewer.list?.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost"
+                      disabled={viewer.index <= 0}
+                      onClick={() => {
+                        const n = viewer.index - 1;
+                        setViewer({ ...viewer, index: n, src: viewer.list[n].dataUrl, name: viewer.list[n].name });
+                      }}
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost"
+                      disabled={viewer.index >= viewer.list.length - 1}
+                      onClick={() => {
+                        const n = viewer.index + 1;
+                        setViewer({ ...viewer, index: n, src: viewer.list[n].dataUrl, name: viewer.list[n].name });
+                      }}
+                    >
+                      →
+                    </button>
+                  </>
+                )}
+                <a className="btn btn-sm btn-ghost" href={viewer.src} download={viewer.name || "photo.jpg"}>
+                  下载
+                </a>
+                <button type="button" className="btn btn-sm btn-primary" onClick={() => setViewer(null)}>
+                  关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
