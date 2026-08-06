@@ -35,6 +35,14 @@ async function fileToCompressedDataUrl(file, maxSide = 1000, quality = 0.72) {
   return canvas.toDataURL("image/jpeg", quality);
 }
 
+async function fileToThumbAndFull(file) {
+  const [thumb, dataUrl] = await Promise.all([
+    fileToCompressedDataUrl(file, 280, 0.62),
+    fileToCompressedDataUrl(file, 1000, 0.72),
+  ]);
+  return { thumb, dataUrl };
+}
+
 function formatWhen(iso) {
   if (!iso) return "—";
   return String(iso).replace("T", " ").slice(0, 16);
@@ -116,8 +124,8 @@ export default function LeadInbox() {
       let photos = row.photos || [];
       for (const file of files) {
         if (!file.type.startsWith("image/")) continue;
-        const dataUrl = await fileToCompressedDataUrl(file);
-        const res = await api.addInboxPhoto(row.id, { dataUrl, name: file.name });
+        const { thumb, dataUrl } = await fileToThumbAndFull(file);
+        const res = await api.addInboxPhoto(row.id, { dataUrl, thumb, name: file.name });
         photos = res.photos;
       }
       setList((rows) => rows.map((r) => (r.id === row.id ? { ...r, photos } : r)));
@@ -126,6 +134,45 @@ export default function LeadInbox() {
       setErr(String(ex.message || ex));
     } finally {
       setUploading(null);
+    }
+  };
+
+  const openPhoto = async (row, index) => {
+    const list = row.photos || [];
+    const p = list[index];
+    if (!p) return;
+    setViewer({
+      leadId: row.id,
+      list,
+      index,
+      name: p.name,
+      src: p.thumb || "",
+      loading: true,
+    });
+    try {
+      const full = await api.getInboxPhoto(row.id, p.id);
+      setViewer((v) => (v && v.leadId === row.id && v.index === index
+        ? { ...v, src: full.dataUrl, name: full.name || p.name, loading: false }
+        : v));
+    } catch (ex) {
+      setErr(String(ex.message || ex));
+      setViewer((v) => (v ? { ...v, loading: false } : v));
+    }
+  };
+
+  const stepViewer = async (delta) => {
+    if (!viewer) return;
+    const n = viewer.index + delta;
+    if (!viewer.list[n]) return;
+    const p = viewer.list[n];
+    setViewer({ ...viewer, index: n, name: p.name, src: p.thumb || viewer.src, loading: true });
+    try {
+      const full = await api.getInboxPhoto(viewer.leadId, p.id);
+      setViewer((v) => (v && v.index === n
+        ? { ...v, src: full.dataUrl, name: full.name || p.name, loading: false }
+        : v));
+    } catch {
+      setViewer((v) => (v ? { ...v, loading: false } : v));
     }
   };
 
@@ -148,8 +195,8 @@ export default function LeadInbox() {
             <span className="muted" style={{ fontSize: "1rem", fontWeight: 500 }}> · {list.length}</span>
           </h2>
           <p className="muted">
-            从各平台复制客户信息粘贴进来。按录入时间排序，状态可筛选，照片在行末上传。
-            照片点缩略图可放大；目前存在 D1 数据库里，单条约 6 张、每张压缩后约几十到一两百 KB——量不大够用，量大了建议改存 Cloudflare R2。
+            从各平台复制客户信息粘贴进来。列表只加载缩略图，点开才拉大图，减轻卡顿。
+            照片仍在 D1；量很大时请在 Cloudflare 开通 R2 再迁存。
           </p>
         </div>
       </div>
@@ -322,15 +369,10 @@ export default function LeadInbox() {
                       <button
                         type="button"
                         className="inbox-photo-open"
-                        onClick={() => setViewer({
-                          list: row.photos || [],
-                          index: pi,
-                          name: p.name,
-                          src: p.dataUrl,
-                        })}
+                        onClick={() => openPhoto(row, pi)}
                         title="点击放大"
                       >
-                        <img src={p.dataUrl} alt={p.name || "photo"} />
+                        <img src={p.thumb || p.dataUrl} alt={p.name || "photo"} />
                       </button>
                       <button type="button" className="inbox-photo-x" onClick={() => removePhoto(row, p.id)} aria-label="Remove photo">×</button>
                     </div>
@@ -366,22 +408,17 @@ export default function LeadInbox() {
           onClick={() => setViewer(null)}
           onKeyDown={(e) => {
             if (e.key === "Escape") setViewer(null);
-            if (e.key === "ArrowRight" && viewer.list[viewer.index + 1]) {
-              const n = viewer.index + 1;
-              setViewer({ ...viewer, index: n, src: viewer.list[n].dataUrl, name: viewer.list[n].name });
-            }
-            if (e.key === "ArrowLeft" && viewer.list[viewer.index - 1]) {
-              const n = viewer.index - 1;
-              setViewer({ ...viewer, index: n, src: viewer.list[n].dataUrl, name: viewer.list[n].name });
-            }
+            if (e.key === "ArrowRight") stepViewer(1);
+            if (e.key === "ArrowLeft") stepViewer(-1);
           }}
           tabIndex={-1}
           ref={(el) => el?.focus()}
         >
           <div className="photo-lightbox-inner" onClick={(e) => e.stopPropagation()}>
             <img src={viewer.src} alt={viewer.name || "photo"} />
+            {viewer.loading && <p className="muted" style={{ color: "#fff", margin: 0 }}>加载大图…</p>}
             <div className="photo-lightbox-bar">
-              <span className="muted">
+              <span className="muted" style={{ color: "oklch(0.9 0.02 255)" }}>
                 {(viewer.index ?? 0) + 1}/{viewer.list?.length || 1}
                 {viewer.name ? ` · ${viewer.name}` : ""}
               </span>
@@ -391,22 +428,16 @@ export default function LeadInbox() {
                     <button
                       type="button"
                       className="btn btn-sm btn-ghost"
-                      disabled={viewer.index <= 0}
-                      onClick={() => {
-                        const n = viewer.index - 1;
-                        setViewer({ ...viewer, index: n, src: viewer.list[n].dataUrl, name: viewer.list[n].name });
-                      }}
+                      disabled={viewer.index <= 0 || viewer.loading}
+                      onClick={() => stepViewer(-1)}
                     >
                       ←
                     </button>
                     <button
                       type="button"
                       className="btn btn-sm btn-ghost"
-                      disabled={viewer.index >= viewer.list.length - 1}
-                      onClick={() => {
-                        const n = viewer.index + 1;
-                        setViewer({ ...viewer, index: n, src: viewer.list[n].dataUrl, name: viewer.list[n].name });
-                      }}
+                      disabled={viewer.index >= viewer.list.length - 1 || viewer.loading}
+                      onClick={() => stepViewer(1)}
                     >
                       →
                     </button>

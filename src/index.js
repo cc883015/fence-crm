@@ -463,12 +463,44 @@ const INBOX_STATUSES = new Set([
   "new", "quoted", "style", "visit", "deposit_wait", "deposit_paid",
 ]);
 
-function mapInbox(row) {
-  if (!row) return row;
+function photoMeta(leadId, p) {
   return {
-    ...row,
-    photos: safeJson(row.photos, []),
+    id: p.id,
+    name: p.name || "",
+    thumb: p.thumb || "",
   };
+}
+
+async function listPhotosForLead(db, leadId) {
+  const { results } = await db.prepare(
+    "SELECT id, name, thumb FROM lead_photos WHERE lead_id=?1 ORDER BY created_at ASC"
+  ).bind(leadId).all();
+  return results || [];
+}
+
+async function migrateLegacyPhotos(db, row) {
+  const legacy = safeJson(row.photos, []);
+  if (!legacy.length) return;
+  const existing = await db.prepare(
+    "SELECT COUNT(*) n FROM lead_photos WHERE lead_id=?1"
+  ).bind(row.id).first();
+  if (existing?.n > 0) return;
+  for (const p of legacy) {
+    if (!p?.id || !p?.dataUrl) continue;
+    await db.prepare(
+      `INSERT OR IGNORE INTO lead_photos (id, lead_id, name, thumb, data)
+       VALUES (?1,?2,?3,?4,?5)`
+    ).bind(p.id, row.id, p.name || "", p.thumb || p.dataUrl, p.dataUrl).run();
+  }
+  await db.prepare("UPDATE lead_inbox SET photos='[]' WHERE id=?1").bind(row.id).run();
+}
+
+async function mapInbox(db, row) {
+  if (!row) return row;
+  await migrateLegacyPhotos(db, row);
+  const photos = await listPhotosForLead(db, row.id);
+  const { photos: _drop, ...rest } = row;
+  return { ...rest, photos };
 }
 
 function normalizeQuotation(q) {
@@ -480,7 +512,7 @@ function normalizeQuotation(q) {
 
 app.get("/api/inbox", async (c) => {
   const status = c.req.query("status");
-  let sql = "SELECT * FROM lead_inbox";
+  let sql = "SELECT id, name, phone, email, address, notes, quotation, status, source, photos, created_at, updated_at FROM lead_inbox";
   const binds = [];
   if (status && INBOX_STATUSES.has(status)) {
     sql += " WHERE status=?1";
@@ -488,7 +520,9 @@ app.get("/api/inbox", async (c) => {
   }
   sql += " ORDER BY created_at ASC, id ASC";
   const { results } = await c.env.DB.prepare(sql).bind(...binds).all();
-  return c.json(results.map(mapInbox));
+  const out = [];
+  for (const row of results) out.push(await mapInbox(c.env.DB, row));
+  return c.json(out);
 });
 
 app.post("/api/inbox", async (c) => {
@@ -499,7 +533,7 @@ app.post("/api/inbox", async (c) => {
   const res = await c.env.DB.prepare(
     `INSERT INTO lead_inbox
       (name, phone, email, address, notes, quotation, status, source, photos)
-     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)`
+     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,'[]')`
   ).bind(
     name,
     String(b.phone || "").trim(),
@@ -508,11 +542,12 @@ app.post("/api/inbox", async (c) => {
     String(b.notes || "").trim(),
     normalizeQuotation(b.quotation),
     status,
-    String(b.source || "").trim(),
-    JSON.stringify(Array.isArray(b.photos) ? b.photos : [])
+    String(b.source || "").trim()
   ).run();
-  const row = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(res.meta.last_row_id).first();
-  return c.json(mapInbox(row));
+  const row = await c.env.DB.prepare(
+    "SELECT id, name, phone, email, address, notes, quotation, status, source, photos, created_at, updated_at FROM lead_inbox WHERE id=?1"
+  ).bind(res.meta.last_row_id).first();
+  return c.json(await mapInbox(c.env.DB, row));
 });
 
 app.put("/api/inbox/:id", async (c) => {
@@ -521,13 +556,12 @@ app.put("/api/inbox/:id", async (c) => {
   if (!prev) return c.json({ error: "not found" }, 404);
   const b = await c.req.json();
   const status = INBOX_STATUSES.has(b.status) ? b.status : (prev.status || "new");
-  const photos = Array.isArray(b.photos) ? b.photos : safeJson(prev.photos, []);
   await c.env.DB.prepare(
     `UPDATE lead_inbox SET
       name=?1, phone=?2, email=?3, address=?4, notes=?5,
-      quotation=?6, status=?7, source=?8, photos=?9,
+      quotation=?6, status=?7, source=?8,
       updated_at=datetime('now')
-     WHERE id=?10`
+     WHERE id=?9`
   ).bind(
     String(b.name ?? prev.name ?? "").trim() || prev.name,
     String(b.phone ?? prev.phone ?? "").trim(),
@@ -537,53 +571,67 @@ app.put("/api/inbox/:id", async (c) => {
     normalizeQuotation(b.quotation ?? prev.quotation),
     status,
     String(b.source ?? prev.source ?? "").trim(),
-    JSON.stringify(photos),
     id
   ).run();
-  const row = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(id).first();
-  return c.json(mapInbox(row));
+  const row = await c.env.DB.prepare(
+    "SELECT id, name, phone, email, address, notes, quotation, status, source, photos, created_at, updated_at FROM lead_inbox WHERE id=?1"
+  ).bind(id).first();
+  return c.json(await mapInbox(c.env.DB, row));
 });
 
 app.delete("/api/inbox/:id", async (c) => {
-  await c.env.DB.prepare("DELETE FROM lead_inbox WHERE id=?1").bind(c.req.param("id")).run();
+  const id = c.req.param("id");
+  await c.env.DB.prepare("DELETE FROM lead_photos WHERE lead_id=?1").bind(id).run();
+  await c.env.DB.prepare("DELETE FROM lead_inbox WHERE id=?1").bind(id).run();
   return c.json({ ok: true });
 });
 
 app.post("/api/inbox/:id/photos", async (c) => {
   const id = c.req.param("id");
-  const prev = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(id).first();
+  const prev = await c.env.DB.prepare("SELECT id FROM lead_inbox WHERE id=?1").bind(id).first();
   if (!prev) return c.json({ error: "not found" }, 404);
   const b = await c.req.json();
   const dataUrl = String(b.dataUrl || "");
+  const thumb = String(b.thumb || b.dataUrl || "");
   if (!dataUrl.startsWith("data:image/")) {
     return c.json({ error: "dataUrl must be an image data URL" }, 400);
   }
   if (dataUrl.length > 700_000) {
     return c.json({ error: "image too large — compress under ~500KB" }, 400);
   }
-  const photos = safeJson(prev.photos, []);
-  if (photos.length >= 6) return c.json({ error: "max 6 photos per lead" }, 400);
-  const photo = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    name: String(b.name || "photo.jpg").slice(0, 80),
-    dataUrl,
-  };
-  photos.push(photo);
+  if (thumb.length > 120_000) {
+    return c.json({ error: "thumb too large" }, 400);
+  }
+  const count = (await c.env.DB.prepare(
+    "SELECT COUNT(*) n FROM lead_photos WHERE lead_id=?1"
+  ).bind(id).first())?.n || 0;
+  if (count >= 6) return c.json({ error: "max 6 photos per lead" }, 400);
+  const photoId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   await c.env.DB.prepare(
-    `UPDATE lead_inbox SET photos=?1, updated_at=datetime('now') WHERE id=?2`
-  ).bind(JSON.stringify(photos), id).run();
-  return c.json({ ok: true, photo, photos });
+    `INSERT INTO lead_photos (id, lead_id, name, thumb, data)
+     VALUES (?1,?2,?3,?4,?5)`
+  ).bind(photoId, id, String(b.name || "photo.jpg").slice(0, 80), thumb || dataUrl, dataUrl).run();
+  await c.env.DB.prepare(
+    "UPDATE lead_inbox SET updated_at=datetime('now') WHERE id=?1"
+  ).bind(id).run();
+  const photos = await listPhotosForLead(c.env.DB, id);
+  return c.json({ ok: true, photo: photoMeta(id, { id: photoId, name: b.name, thumb: thumb || dataUrl }), photos });
+});
+
+app.get("/api/inbox/:id/photos/:photoId", async (c) => {
+  const row = await c.env.DB.prepare(
+    "SELECT id, name, data FROM lead_photos WHERE id=?1 AND lead_id=?2"
+  ).bind(c.req.param("photoId"), c.req.param("id")).first();
+  if (!row) return c.json({ error: "not found" }, 404);
+  return c.json({ id: row.id, name: row.name, dataUrl: row.data });
 });
 
 app.delete("/api/inbox/:id/photos/:photoId", async (c) => {
   const id = c.req.param("id");
-  const photoId = c.req.param("photoId");
-  const prev = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(id).first();
-  if (!prev) return c.json({ error: "not found" }, 404);
-  const photos = safeJson(prev.photos, []).filter((p) => p.id !== photoId);
   await c.env.DB.prepare(
-    `UPDATE lead_inbox SET photos=?1, updated_at=datetime('now') WHERE id=?2`
-  ).bind(JSON.stringify(photos), id).run();
+    "DELETE FROM lead_photos WHERE id=?1 AND lead_id=?2"
+  ).bind(c.req.param("photoId"), id).run();
+  const photos = await listPhotosForLead(c.env.DB, id);
   return c.json({ ok: true, photos });
 });
 

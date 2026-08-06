@@ -64,5 +64,6 @@ export const api = {
   updateInbox: (id, d) => j("PUT", `/inbox/${id}`, d, true),
   deleteInbox: (id) => j("DELETE", `/inbox/${id}`, null, true),
   addInboxPhoto: (id, d) => j("POST", `/inbox/${id}/photos`, d, true),
+  getInboxPhoto: (id, photoId) => j("GET", `/inbox/${id}/photos/${photoId}`, null, true),
   deleteInboxPhoto: (id, photoId) => j("DELETE", `/inbox/${id}/photos/${photoId}`, null, true),
 };
