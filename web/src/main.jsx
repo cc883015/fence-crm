@@ -13,6 +13,7 @@ import Enquiries from "./pages/Enquiries.jsx";
 import AdminAppointments from "./pages/AdminAppointments.jsx";
 import DailyChecklist from "./pages/DailyChecklist.jsx";
 import PriceGuide from "./pages/PriceGuide.jsx";
+import LeadInbox from "./pages/LeadInbox.jsx";
 import Reports from "./pages/Reports.jsx";
 import "./styles.css";
 
@@ -37,6 +38,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               <Route path="prices" element={<PriceGuide />} />
               <Route path="enquiries" element={<Enquiries />} />
               <Route path="appointments" element={<AdminAppointments />} />
+              <Route path="inbox" element={<LeadInbox />} />
               <Route path="new" element={<NewCustomerWizard />} />
               <Route path="customers/:id" element={<CustomerDetail />} />
               <Route path="reports" element={<Reports />} />
