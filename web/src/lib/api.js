@@ -54,4 +54,15 @@ export const api = {
   createAppointment: (d) => j("POST", "/appointments", d, true),
   updateAppointment: (id, d) => j("PUT", `/appointments/${id}`, d, true),
   deleteAppointment: (id) => j("DELETE", `/appointments/${id}`, null, true),
+  inbox: (q = {}) => {
+    const params = new URLSearchParams();
+    if (q.status && q.status !== "all") params.set("status", q.status);
+    const qs = params.toString();
+    return j("GET", `/inbox${qs ? `?${qs}` : ""}`, null, true);
+  },
+  createInbox: (d) => j("POST", "/inbox", d, true),
+  updateInbox: (id, d) => j("PUT", `/inbox/${id}`, d, true),
+  deleteInbox: (id) => j("DELETE", `/inbox/${id}`, null, true),
+  addInboxPhoto: (id, d) => j("POST", `/inbox/${id}/photos`, d, true),
+  deleteInboxPhoto: (id, photoId) => j("DELETE", `/inbox/${id}/photos/${photoId}`, null, true),
 };

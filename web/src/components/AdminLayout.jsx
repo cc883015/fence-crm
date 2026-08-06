@@ -46,6 +46,12 @@ export default function AdminLayout() {
           <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin" end>
             订单 Orders
           </NavLink>
+          <NavLink
+            className={({ isActive }) => `navlink navlink-alert${isActive ? " on" : ""}`}
+            to="/admin/inbox"
+          >
+            来客跟进
+          </NavLink>
           <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/enquiries">
             新资讯 Enquiries
           </NavLink>

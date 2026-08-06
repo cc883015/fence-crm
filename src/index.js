@@ -185,6 +185,8 @@ app.use("/api/payments/*", requireAuth);
 app.use("/api/reports/*", requireAuth);
 app.use("/api/appointments/*", requireAuth);
 app.use("/api/appointments", requireAuth);
+app.use("/api/inbox/*", requireAuth);
+app.use("/api/inbox", requireAuth);
 app.use("/api/leads", async (c, next) => {
   if (c.req.method === "GET") return requireAuth(c, next);
   return next();
@@ -455,6 +457,134 @@ app.put("/api/appointments/:id", async (c) => {
 app.delete("/api/appointments/:id", async (c) => {
   await c.env.DB.prepare("DELETE FROM measurement_appointments WHERE id=?1").bind(c.req.param("id")).run();
   return c.json({ ok: true });
+});
+
+const INBOX_STATUSES = new Set([
+  "new", "quoted", "style", "visit", "deposit_wait", "deposit_paid",
+]);
+
+function mapInbox(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    photos: safeJson(row.photos, []),
+  };
+}
+
+function normalizeQuotation(q) {
+  const s = String(q || "").trim();
+  if (!s) return "";
+  if (/^QU-/i.test(s)) return s.toUpperCase().replace(/^QU-/i, "QU-");
+  return `QU-${s.replace(/^QU-/i, "")}`;
+}
+
+app.get("/api/inbox", async (c) => {
+  const status = c.req.query("status");
+  let sql = "SELECT * FROM lead_inbox";
+  const binds = [];
+  if (status && INBOX_STATUSES.has(status)) {
+    sql += " WHERE status=?1";
+    binds.push(status);
+  }
+  sql += " ORDER BY created_at ASC, id ASC";
+  const { results } = await c.env.DB.prepare(sql).bind(...binds).all();
+  return c.json(results.map(mapInbox));
+});
+
+app.post("/api/inbox", async (c) => {
+  const b = await c.req.json();
+  const name = String(b.name || "").trim();
+  if (!name) return c.json({ error: "name required" }, 400);
+  const status = INBOX_STATUSES.has(b.status) ? b.status : "new";
+  const res = await c.env.DB.prepare(
+    `INSERT INTO lead_inbox
+      (name, phone, email, address, notes, quotation, status, source, photos)
+     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)`
+  ).bind(
+    name,
+    String(b.phone || "").trim(),
+    String(b.email || "").trim(),
+    String(b.address || "").trim(),
+    String(b.notes || "").trim(),
+    normalizeQuotation(b.quotation),
+    status,
+    String(b.source || "").trim(),
+    JSON.stringify(Array.isArray(b.photos) ? b.photos : [])
+  ).run();
+  const row = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(res.meta.last_row_id).first();
+  return c.json(mapInbox(row));
+});
+
+app.put("/api/inbox/:id", async (c) => {
+  const id = c.req.param("id");
+  const prev = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(id).first();
+  if (!prev) return c.json({ error: "not found" }, 404);
+  const b = await c.req.json();
+  const status = INBOX_STATUSES.has(b.status) ? b.status : (prev.status || "new");
+  const photos = Array.isArray(b.photos) ? b.photos : safeJson(prev.photos, []);
+  await c.env.DB.prepare(
+    `UPDATE lead_inbox SET
+      name=?1, phone=?2, email=?3, address=?4, notes=?5,
+      quotation=?6, status=?7, source=?8, photos=?9,
+      updated_at=datetime('now')
+     WHERE id=?10`
+  ).bind(
+    String(b.name ?? prev.name ?? "").trim() || prev.name,
+    String(b.phone ?? prev.phone ?? "").trim(),
+    String(b.email ?? prev.email ?? "").trim(),
+    String(b.address ?? prev.address ?? "").trim(),
+    String(b.notes ?? prev.notes ?? "").trim(),
+    normalizeQuotation(b.quotation ?? prev.quotation),
+    status,
+    String(b.source ?? prev.source ?? "").trim(),
+    JSON.stringify(photos),
+    id
+  ).run();
+  const row = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(id).first();
+  return c.json(mapInbox(row));
+});
+
+app.delete("/api/inbox/:id", async (c) => {
+  await c.env.DB.prepare("DELETE FROM lead_inbox WHERE id=?1").bind(c.req.param("id")).run();
+  return c.json({ ok: true });
+});
+
+app.post("/api/inbox/:id/photos", async (c) => {
+  const id = c.req.param("id");
+  const prev = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(id).first();
+  if (!prev) return c.json({ error: "not found" }, 404);
+  const b = await c.req.json();
+  const dataUrl = String(b.dataUrl || "");
+  if (!dataUrl.startsWith("data:image/")) {
+    return c.json({ error: "dataUrl must be an image data URL" }, 400);
+  }
+  if (dataUrl.length > 700_000) {
+    return c.json({ error: "image too large — compress under ~500KB" }, 400);
+  }
+  const photos = safeJson(prev.photos, []);
+  if (photos.length >= 6) return c.json({ error: "max 6 photos per lead" }, 400);
+  const photo = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: String(b.name || "photo.jpg").slice(0, 80),
+    dataUrl,
+  };
+  photos.push(photo);
+  await c.env.DB.prepare(
+    `UPDATE lead_inbox SET photos=?1, updated_at=datetime('now') WHERE id=?2`
+  ).bind(JSON.stringify(photos), id).run();
+  return c.json({ ok: true, photo, photos });
+});
+
+app.delete("/api/inbox/:id/photos/:photoId", async (c) => {
+  const id = c.req.param("id");
+  const photoId = c.req.param("photoId");
+  const prev = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(id).first();
+  if (!prev) return c.json({ error: "not found" }, 404);
+  const photos = safeJson(prev.photos, []).filter((p) => p.id !== photoId);
+  await c.env.DB.prepare(
+    `UPDATE lead_inbox SET photos=?1, updated_at=datetime('now') WHERE id=?2`
+  ).bind(JSON.stringify(photos), id).run();
+  return c.json({ ok: true, photos });
 });
 
 app.get("/api/reports/summary", async (c) => {

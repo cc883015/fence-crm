@@ -1447,3 +1447,140 @@ button, input, select, textarea { font: inherit; }
   .appt-card-panel { padding: 1rem; }
   .appt-note-input { font-size: 16px; min-height: 2.5rem; }
 }
+
+/* Lead inbox — spacious rows */
+.inbox-create {
+  padding: 1.25rem 1.35rem 1.4rem;
+  border-radius: 1.2rem;
+  margin-bottom: 1rem;
+}
+.inbox-create-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+.inbox-filters {
+  margin: 0 0 0.85rem;
+  flex-wrap: wrap;
+}
+.inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.inbox-card {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr minmax(11rem, 15rem);
+  gap: 1rem;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border-radius: 1.2rem;
+  align-items: stretch;
+  min-height: 11rem;
+}
+.inbox-seq {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--color-gold);
+  padding-top: 0.35rem;
+}
+.inbox-main { min-width: 0; display: flex; flex-direction: column; gap: 0.65rem; }
+.inbox-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 0.85rem;
+}
+.inbox-span-2 { grid-column: span 2; }
+.inbox-fields .field input,
+.inbox-fields .field select,
+.inbox-fields .field textarea,
+.inbox-create .field input,
+.inbox-create .field select,
+.inbox-create .field textarea {
+  min-height: 2.75rem;
+  font-size: 1rem;
+  padding: 0.65rem 0.8rem;
+}
+.inbox-fields .field textarea,
+.inbox-create .field textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+.inbox-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+.inbox-photos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  border-left: 1px dashed var(--color-border);
+  padding-left: 0.85rem;
+  min-height: 100%;
+}
+.inbox-photo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  flex: 1;
+  align-content: start;
+}
+.inbox-photo {
+  position: relative;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: oklch(0.94 0.01 255);
+}
+.inbox-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.inbox-photo-x {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 0;
+  border-radius: 999px;
+  background: oklch(0.2 0.02 255 / 0.7);
+  color: #fff;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 1rem;
+}
+.inbox-upload { width: 100%; justify-content: center; cursor: pointer; }
+.inbox-upload.disabled { opacity: 0.6; pointer-events: none; }
+@media (max-width: 960px) {
+  .inbox-create-grid,
+  .inbox-fields { grid-template-columns: 1fr 1fr; }
+  .inbox-span-2 { grid-column: 1 / -1; }
+  .inbox-card {
+    grid-template-columns: 2.5rem 1fr;
+  }
+  .inbox-photos {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px dashed var(--color-border);
+    padding-left: 0;
+    padding-top: 0.75rem;
+  }
+  .inbox-photo-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 640px) {
+  .inbox-create-grid,
+  .inbox-fields { grid-template-columns: 1fr; }
+  .inbox-card { grid-template-columns: 1fr; padding: 1rem; }
+  .inbox-seq { padding-top: 0; }
+  .inbox-photo-grid { grid-template-columns: repeat(3, 1fr); }
+  .inbox-fields .field input,
+  .inbox-fields .field select,
+  .inbox-fields .field textarea {
+    font-size: 16px;
+  }
+}
