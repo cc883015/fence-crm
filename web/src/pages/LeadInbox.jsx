@@ -4,10 +4,8 @@ import { api } from "../lib/api.js";
 const STATUSES = [
   { id: "new", zh: "新咨询" },
   { id: "quoted", zh: "已发报价" },
-  { id: "style", zh: "确认款式" },
-  { id: "visit", zh: "预约上门" },
-  { id: "deposit_wait", zh: "待收定金" },
   { id: "deposit_paid", zh: "已付定金" },
+  { id: "done", zh: "已完工" },
 ];
 
 const empty = {
