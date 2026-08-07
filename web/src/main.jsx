@@ -1,20 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LangProvider } from "./context/LangContext.jsx";
 import AdminLayout, { RequireAdmin } from "./components/AdminLayout.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
-import AdminBoard from "./pages/AdminBoard.jsx";
-import NewCustomerWizard from "./pages/NewCustomerWizard.jsx";
-import CustomerDetail from "./pages/CustomerDetail.jsx";
-import Enquiries from "./pages/Enquiries.jsx";
 import AdminAppointments from "./pages/AdminAppointments.jsx";
 import DailyChecklist from "./pages/DailyChecklist.jsx";
 import PriceGuide from "./pages/PriceGuide.jsx";
 import LeadInbox from "./pages/LeadInbox.jsx";
-import Reports from "./pages/Reports.jsx";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -33,15 +28,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                 </RequireAdmin>
               }
             >
-              <Route index element={<AdminBoard />} />
+              {/* Default away from retired Orders board */}
+              <Route index element={<Navigate to="inbox" replace />} />
               <Route path="checklist" element={<DailyChecklist />} />
               <Route path="prices" element={<PriceGuide />} />
-              <Route path="enquiries" element={<Enquiries />} />
               <Route path="appointments" element={<AdminAppointments />} />
               <Route path="inbox" element={<LeadInbox />} />
-              <Route path="new" element={<NewCustomerWizard />} />
-              <Route path="customers/:id" element={<CustomerDetail />} />
-              <Route path="reports" element={<Reports />} />
             </Route>
           </Routes>
         </BrowserRouter>
