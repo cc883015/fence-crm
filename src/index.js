@@ -523,6 +523,46 @@ function normalizeQuotation(q) {
   return `QU-${s.replace(/^QU-/i, "")}`;
 }
 
+const INBOX_STATUS_LABEL = {
+  new: "新咨询",
+  quoted: "已发报价",
+  deposit_paid: "已付定金",
+  done: "已完工",
+};
+
+async function logInbox(db, { leadId = null, leadName = "", action, detail = "" }) {
+  await db.prepare(
+    `INSERT INTO lead_inbox_logs (lead_id, lead_name, action, detail)
+     VALUES (?1,?2,?3,?4)`
+  ).bind(leadId, String(leadName || "").slice(0, 120), action, String(detail || "").slice(0, 500)).run();
+}
+
+function inboxFieldDiffs(prev, next) {
+  const labels = {
+    name: "姓名",
+    phone: "电话",
+    email: "邮箱",
+    address: "地址",
+    notes: "备注",
+    quotation: "报价号",
+    status: "状态",
+    source: "来源",
+  };
+  const parts = [];
+  for (const [k, label] of Object.entries(labels)) {
+    const a = String(prev[k] ?? "");
+    const b = String(next[k] ?? "");
+    if (a === b) continue;
+    if (k === "status") {
+      parts.push(`${label} ${INBOX_STATUS_LABEL[a] || a}→${INBOX_STATUS_LABEL[b] || b}`);
+    } else {
+      const short = (v) => (v.length > 40 ? `${v.slice(0, 40)}…` : v) || "（空）";
+      parts.push(`${label} ${short(a)}→${short(b)}`);
+    }
+  }
+  return parts;
+}
+
 app.get("/api/inbox", async (c) => {
   const status = c.req.query("status");
   let sql = "SELECT id, name, phone, email, address, notes, quotation, status, source, photos, created_at, updated_at FROM lead_inbox";
@@ -565,7 +605,24 @@ app.post("/api/inbox", async (c) => {
   const row = await c.env.DB.prepare(
     "SELECT id, name, phone, email, address, notes, quotation, status, source, photos, created_at, updated_at FROM lead_inbox WHERE id=?1"
   ).bind(res.meta.last_row_id).first();
+  await logInbox(c.env.DB, {
+    leadId: row.id,
+    leadName: row.name,
+    action: "create",
+    detail: `新建来客 · ${INBOX_STATUS_LABEL[row.status] || row.status}${row.source ? ` · ${row.source}` : ""}`,
+  });
   return c.json(await mapInbox(c.env.DB, row));
+});
+
+app.get("/api/inbox/logs", async (c) => {
+  const limit = Math.min(100, Math.max(1, Number(c.req.query("limit") || 40)));
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, lead_id, lead_name, action, detail, created_at
+     FROM lead_inbox_logs
+     ORDER BY id DESC
+     LIMIT ?1`
+  ).bind(limit).all();
+  return c.json(results || []);
 });
 
 app.put("/api/inbox/:id", async (c) => {
@@ -577,6 +634,16 @@ app.put("/api/inbox/:id", async (c) => {
     b.status ?? prev.status,
     normalizeInboxStatus(prev.status, "new")
   );
+  const next = {
+    name: String(b.name ?? prev.name ?? "").trim() || prev.name,
+    phone: String(b.phone ?? prev.phone ?? "").trim(),
+    email: String(b.email ?? prev.email ?? "").trim(),
+    address: String(b.address ?? prev.address ?? "").trim(),
+    notes: String(b.notes ?? prev.notes ?? "").trim(),
+    quotation: normalizeQuotation(b.quotation ?? prev.quotation),
+    status,
+    source: String(b.source ?? prev.source ?? "").trim(),
+  };
   await c.env.DB.prepare(
     `UPDATE lead_inbox SET
       name=?1, phone=?2, email=?3, address=?4, notes=?5,
@@ -584,16 +651,18 @@ app.put("/api/inbox/:id", async (c) => {
       updated_at=datetime('now')
      WHERE id=?9`
   ).bind(
-    String(b.name ?? prev.name ?? "").trim() || prev.name,
-    String(b.phone ?? prev.phone ?? "").trim(),
-    String(b.email ?? prev.email ?? "").trim(),
-    String(b.address ?? prev.address ?? "").trim(),
-    String(b.notes ?? prev.notes ?? "").trim(),
-    normalizeQuotation(b.quotation ?? prev.quotation),
-    status,
-    String(b.source ?? prev.source ?? "").trim(),
-    id
+    next.name, next.phone, next.email, next.address, next.notes,
+    next.quotation, next.status, next.source, id
   ).run();
+  const diffs = inboxFieldDiffs(prev, next);
+  if (diffs.length) {
+    await logInbox(c.env.DB, {
+      leadId: Number(id),
+      leadName: next.name,
+      action: "update",
+      detail: diffs.join("；"),
+    });
+  }
   const row = await c.env.DB.prepare(
     "SELECT id, name, phone, email, address, notes, quotation, status, source, photos, created_at, updated_at FROM lead_inbox WHERE id=?1"
   ).bind(id).first();
@@ -602,14 +671,29 @@ app.put("/api/inbox/:id", async (c) => {
 
 app.delete("/api/inbox/:id", async (c) => {
   const id = c.req.param("id");
+  const prev = await c.env.DB.prepare(
+    "SELECT id, name FROM lead_inbox WHERE id=?1"
+  ).bind(id).first();
+  if (!prev) return c.json({ error: "not found" }, 404);
+  const photoCount = (await c.env.DB.prepare(
+    "SELECT COUNT(*) n FROM lead_photos WHERE lead_id=?1"
+  ).bind(id).first())?.n || 0;
   await c.env.DB.prepare("DELETE FROM lead_photos WHERE lead_id=?1").bind(id).run();
   await c.env.DB.prepare("DELETE FROM lead_inbox WHERE id=?1").bind(id).run();
+  await logInbox(c.env.DB, {
+    leadId: prev.id,
+    leadName: prev.name,
+    action: "delete",
+    detail: `删除来客${photoCount ? `（含 ${photoCount} 张照片）` : ""}`,
+  });
   return c.json({ ok: true });
 });
 
 app.post("/api/inbox/:id/photos", async (c) => {
   const id = c.req.param("id");
-  const prev = await c.env.DB.prepare("SELECT id FROM lead_inbox WHERE id=?1").bind(id).first();
+  const prev = await c.env.DB.prepare(
+    "SELECT id, name FROM lead_inbox WHERE id=?1"
+  ).bind(id).first();
   if (!prev) return c.json({ error: "not found" }, 404);
   const b = await c.req.json();
   const dataUrl = String(b.dataUrl || "");
@@ -628,15 +712,22 @@ app.post("/api/inbox/:id/photos", async (c) => {
   ).bind(id).first())?.n || 0;
   if (count >= 6) return c.json({ error: "max 6 photos per lead" }, 400);
   const photoId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const photoName = String(b.name || "photo.jpg").slice(0, 80);
   await c.env.DB.prepare(
     `INSERT INTO lead_photos (id, lead_id, name, thumb, data)
      VALUES (?1,?2,?3,?4,?5)`
-  ).bind(photoId, id, String(b.name || "photo.jpg").slice(0, 80), thumb || dataUrl, dataUrl).run();
+  ).bind(photoId, id, photoName, thumb || dataUrl, dataUrl).run();
   await c.env.DB.prepare(
     "UPDATE lead_inbox SET updated_at=datetime('now') WHERE id=?1"
   ).bind(id).run();
+  await logInbox(c.env.DB, {
+    leadId: prev.id,
+    leadName: prev.name,
+    action: "photo_add",
+    detail: `上传照片 ${photoName}`,
+  });
   const photos = await listPhotosForLead(c.env.DB, id);
-  return c.json({ ok: true, photo: photoMeta(id, { id: photoId, name: b.name, thumb: thumb || dataUrl }), photos });
+  return c.json({ ok: true, photo: photoMeta(id, { id: photoId, name: photoName, thumb: thumb || dataUrl }), photos });
 });
 
 app.get("/api/inbox/:id/photos/:photoId", async (c) => {
@@ -649,9 +740,23 @@ app.get("/api/inbox/:id/photos/:photoId", async (c) => {
 
 app.delete("/api/inbox/:id/photos/:photoId", async (c) => {
   const id = c.req.param("id");
+  const photoId = c.req.param("photoId");
+  const lead = await c.env.DB.prepare(
+    "SELECT id, name FROM lead_inbox WHERE id=?1"
+  ).bind(id).first();
+  const photo = await c.env.DB.prepare(
+    "SELECT id, name FROM lead_photos WHERE id=?1 AND lead_id=?2"
+  ).bind(photoId, id).first();
+  if (!photo) return c.json({ error: "not found" }, 404);
   await c.env.DB.prepare(
     "DELETE FROM lead_photos WHERE id=?1 AND lead_id=?2"
-  ).bind(c.req.param("photoId"), id).run();
+  ).bind(photoId, id).run();
+  await logInbox(c.env.DB, {
+    leadId: lead?.id || Number(id),
+    leadName: lead?.name || "",
+    action: "photo_delete",
+    detail: `删除照片 ${photo.name || photoId}`,
+  });
   const photos = await listPhotosForLead(c.env.DB, id);
   return c.json({ ok: true, photos });
 });

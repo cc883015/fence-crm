@@ -66,4 +66,5 @@ export const api = {
   addInboxPhoto: (id, d) => j("POST", `/inbox/${id}/photos`, d, true),
   getInboxPhoto: (id, photoId) => j("GET", `/inbox/${id}/photos/${photoId}`, null, true),
   deleteInboxPhoto: (id, photoId) => j("DELETE", `/inbox/${id}/photos/${photoId}`, null, true),
+  inboxLogs: (limit = 40) => j("GET", `/inbox/logs?limit=${limit}`, null, true),
 };

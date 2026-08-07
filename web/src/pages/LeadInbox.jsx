@@ -8,6 +8,14 @@ const STATUSES = [
   { id: "done", zh: "已完工" },
 ];
 
+const ACTION_LABEL = {
+  create: "新建",
+  update: "修改",
+  delete: "删除",
+  photo_add: "上传照片",
+  photo_delete: "删除照片",
+};
+
 const empty = {
   name: "",
   phone: "",
@@ -48,15 +56,24 @@ function formatWhen(iso) {
 
 export default function LeadInbox() {
   const [list, setList] = useState([]);
+  const [logs, setLogs] = useState([]);
   const [filter, setFilter] = useState("all");
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(null);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
-  const [viewer, setViewer] = useState(null); // { src, name, list, index }
+  const [viewer, setViewer] = useState(null);
+  // { kind, title, body, step, maxStep, payload }
+  const [confirmDlg, setConfirmDlg] = useState(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const loadLogs = () => {
+    api.inboxLogs(50)
+      .then(setLogs)
+      .catch(() => {});
+  };
 
   const load = () => {
     api.inbox({ status: filter })
@@ -65,6 +82,7 @@ export default function LeadInbox() {
         setErr("");
       })
       .catch((e) => setErr(String(e.message || e)));
+    loadLogs();
   };
 
   useEffect(load, [filter]);
@@ -72,7 +90,6 @@ export default function LeadInbox() {
   const counts = useMemo(() => {
     const m = { all: list.length };
     STATUSES.forEach((s) => { m[s.id] = 0; });
-    // counts from filtered list only show current; load all for chips when filter=all
     list.forEach((r) => { m[r.status] = (m[r.status] || 0) + 1; });
     return m;
   }, [list]);
@@ -101,16 +118,66 @@ export default function LeadInbox() {
     try {
       const next = await api.updateInbox(row.id, { ...row, ...partial });
       setList((rows) => rows.map((r) => (r.id === row.id ? next : r)));
+      loadLogs();
     } catch (ex) {
       setErr(String(ex.message || ex));
       load();
     }
   };
 
-  const remove = async (row) => {
-    if (!confirm(`删除来客「${row.name}」？`)) return;
-    await api.deleteInbox(row.id);
-    load();
+  const askDeleteLead = (row) => {
+    setConfirmDlg({
+      kind: "lead",
+      title: "删除来客？",
+      body: `将永久删除「${row.name || "未命名"}」及其全部照片，此操作不可恢复。`,
+      step: 1,
+      maxStep: 2,
+      payload: row,
+    });
+  };
+
+  const askDeletePhoto = (row, photo) => {
+    setConfirmDlg({
+      kind: "photo",
+      title: "删除照片？",
+      body: `确定删除「${row.name || "来客"}」的这张照片${photo?.name ? `（${photo.name}）` : ""}？删除后无法恢复。`,
+      step: 1,
+      maxStep: 2,
+      payload: { row, photoId: photo.id },
+    });
+  };
+
+  const runConfirmedDelete = async () => {
+    if (!confirmDlg) return;
+    const { kind, step, maxStep, payload } = confirmDlg;
+    if (step < maxStep) {
+      setConfirmDlg({
+        ...confirmDlg,
+        step: step + 1,
+        title: kind === "lead" ? "再次确认删除来客" : "再次确认删除照片",
+        body: kind === "lead"
+          ? `请再次确认：删除「${payload.name || "未命名"}」及全部照片。点「确认删除」后立即执行。`
+          : `请再次确认删除该照片。点「确认删除」后立即执行。`,
+      });
+      return;
+    }
+    setConfirmDlg(null);
+    setErr("");
+    try {
+      if (kind === "lead") {
+        await api.deleteInbox(payload.id);
+        setOk(`已删除「${payload.name || "来客"}」`);
+        load();
+      } else {
+        const { row, photoId } = payload;
+        const res = await api.deleteInboxPhoto(row.id, photoId);
+        setList((rows) => rows.map((r) => (r.id === row.id ? { ...r, photos: res.photos } : r)));
+        setOk("照片已删除");
+        loadLogs();
+      }
+    } catch (ex) {
+      setErr(String(ex.message || ex));
+    }
   };
 
   const onUpload = async (row, fileList) => {
@@ -128,6 +195,7 @@ export default function LeadInbox() {
       }
       setList((rows) => rows.map((r) => (r.id === row.id ? { ...r, photos } : r)));
       setOk("照片已上传");
+      loadLogs();
     } catch (ex) {
       setErr(String(ex.message || ex));
     } finally {
@@ -136,12 +204,12 @@ export default function LeadInbox() {
   };
 
   const openPhoto = async (row, index) => {
-    const list = row.photos || [];
-    const p = list[index];
+    const plist = row.photos || [];
+    const p = plist[index];
     if (!p) return;
     setViewer({
       leadId: row.id,
-      list,
+      list: plist,
       index,
       name: p.name,
       src: p.thumb || "",
@@ -174,15 +242,6 @@ export default function LeadInbox() {
     }
   };
 
-  const removePhoto = async (row, photoId) => {
-    try {
-      const res = await api.deleteInboxPhoto(row.id, photoId);
-      setList((rows) => rows.map((r) => (r.id === row.id ? { ...r, photos: res.photos } : r)));
-    } catch (ex) {
-      setErr(String(ex.message || ex));
-    }
-  };
-
   return (
     <div className="orders-main inbox-page">
       <div className="orders-head">
@@ -193,8 +252,7 @@ export default function LeadInbox() {
             <span className="muted" style={{ fontSize: "1rem", fontWeight: 500 }}> · {list.length}</span>
           </h2>
           <p className="muted">
-            从各平台复制客户信息粘贴进来。列表只加载缩略图，点开才拉大图，减轻卡顿。
-            照片仍在 D1；量很大时请在 Cloudflare 开通 R2 再迁存。
+            从各平台复制客户信息粘贴进来。删除来客或照片需两次确认。下方可查看操作记录。
           </p>
         </div>
       </div>
@@ -356,7 +414,7 @@ export default function LeadInbox() {
                 </div>
                 <div className="inbox-meta">
                   <span className="muted">录入 {formatWhen(row.created_at)}</span>
-                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => remove(row)}>删除</button>
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => askDeleteLead(row)}>删除</button>
                 </div>
               </div>
 
@@ -372,7 +430,14 @@ export default function LeadInbox() {
                       >
                         <img src={p.thumb || p.dataUrl} alt={p.name || "photo"} />
                       </button>
-                      <button type="button" className="inbox-photo-x" onClick={() => removePhoto(row, p.id)} aria-label="Remove photo">×</button>
+                      <button
+                        type="button"
+                        className="inbox-photo-x"
+                        onClick={() => askDeletePhoto(row, p)}
+                        aria-label="Remove photo"
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -397,6 +462,55 @@ export default function LeadInbox() {
           ))
         )}
       </div>
+
+      <section className="ts-glass inbox-log-panel" aria-label="操作记录">
+        <div className="inbox-log-head">
+          <div>
+            <p className="ts-eyebrow">History</p>
+            <h3 style={{ margin: "0.15rem 0 0" }}>操作记录</h3>
+          </div>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={loadLogs}>刷新</button>
+        </div>
+        {logs.length === 0 ? (
+          <p className="muted" style={{ margin: 0 }}>暂无操作记录。新建、修改、上传/删除照片都会写在这里。</p>
+        ) : (
+          <ul className="inbox-log-list">
+            {logs.map((log) => (
+              <li key={log.id} className="inbox-log-item">
+                <span className="inbox-log-time">{formatWhen(log.created_at)}</span>
+                <span className={`inbox-log-action action-${log.action}`}>
+                  {ACTION_LABEL[log.action] || log.action}
+                </span>
+                <span className="inbox-log-name">{log.lead_name || "—"}</span>
+                <span className="inbox-log-detail muted">{log.detail || ""}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {confirmDlg && (
+        <div
+          className="confirm-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setConfirmDlg(null)}
+        >
+          <div className="confirm-modal-card ts-glass" onClick={(e) => e.stopPropagation()}>
+            <p className="ts-eyebrow">确认 {confirmDlg.step}/{confirmDlg.maxStep}</p>
+            <h3 style={{ margin: "0.25rem 0 0.5rem" }}>{confirmDlg.title}</h3>
+            <p className="muted" style={{ margin: "0 0 1rem" }}>{confirmDlg.body}</p>
+            <div className="toolbar" style={{ margin: 0, justifyContent: "flex-end" }}>
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirmDlg(null)}>
+                取消
+              </button>
+              <button type="button" className="btn btn-sm btn-primary" onClick={runConfirmedDelete}>
+                {confirmDlg.step < confirmDlg.maxStep ? "继续" : "确认删除"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {viewer && (
         <div
