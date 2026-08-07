@@ -1567,6 +1567,64 @@ button, input, select, textarea { font: inherit; }
 .inbox-upload { width: 100%; justify-content: center; cursor: pointer; }
 .inbox-upload.disabled { opacity: 0.6; pointer-events: none; }
 
+.inbox-log-panel {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem 1.15rem;
+}
+.inbox-log-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.inbox-log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 22rem;
+  overflow: auto;
+}
+.inbox-log-item {
+  display: grid;
+  grid-template-columns: 7.5rem 5.5rem minmax(4rem, 7rem) 1fr;
+  gap: 0.5rem 0.65rem;
+  align-items: baseline;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  background: oklch(0.97 0.005 255 / 0.7);
+  font-size: 0.86rem;
+}
+.inbox-log-time { font-variant-numeric: tabular-nums; color: var(--color-muted, #6b7280); }
+.inbox-log-action {
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+.inbox-log-action.action-delete,
+.inbox-log-action.action-photo_delete { color: #b42318; }
+.inbox-log-action.action-create,
+.inbox-log-action.action-photo_add { color: #087443; }
+.inbox-log-action.action-update { color: #175cd3; }
+.inbox-log-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inbox-log-detail { overflow-wrap: anywhere; }
+
+.confirm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: oklch(0.18 0.02 255 / 0.55);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+.confirm-modal-card {
+  width: min(420px, 100%);
+  padding: 1.15rem 1.2rem 1.2rem;
+}
+
 .photo-lightbox {
   position: fixed;
   inset: 0;
@@ -1626,4 +1684,8 @@ button, input, select, textarea { font: inherit; }
   .inbox-fields .field textarea {
     font-size: 16px;
   }
+  .inbox-log-item {
+    grid-template-columns: 1fr 1fr;
+  }
+  .inbox-log-detail { grid-column: 1 / -1; }
 }
