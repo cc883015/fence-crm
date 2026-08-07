@@ -43,23 +43,11 @@ export default function AdminLayout() {
               测量
             </NavLink>
           </div>
-          <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin" end>
-            订单 Orders
-          </NavLink>
           <NavLink
             className={({ isActive }) => `navlink navlink-alert${isActive ? " on" : ""}`}
             to="/admin/inbox"
           >
             来客跟进
-          </NavLink>
-          <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/enquiries">
-            新资讯 Enquiries
-          </NavLink>
-          <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/new">
-            新客户 New
-          </NavLink>
-          <NavLink className={({ isActive }) => (isActive ? "navlink on" : "navlink")} to="/admin/reports">
-            报表 Reports
           </NavLink>
           <Link className="navlink" to="/">官网</Link>
           <button type="button" className="btn btn-ghost btn-sm" onClick={logout}>退出</button>
