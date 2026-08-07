@@ -460,8 +460,21 @@ app.delete("/api/appointments/:id", async (c) => {
 });
 
 const INBOX_STATUSES = new Set([
-  "new", "quoted", "style", "visit", "deposit_wait", "deposit_paid",
+  "new", "quoted", "deposit_paid", "done",
 ]);
+
+/** Retired inbox statuses → still-visible bucket (rows are never deleted). */
+const INBOX_STATUS_LEGACY = {
+  style: "quoted",
+  visit: "quoted",
+  deposit_wait: "quoted",
+};
+
+function normalizeInboxStatus(status, fallback = "new") {
+  if (INBOX_STATUSES.has(status)) return status;
+  if (status && INBOX_STATUS_LEGACY[status]) return INBOX_STATUS_LEGACY[status];
+  return fallback;
+}
 
 function photoMeta(leadId, p) {
   return {
@@ -521,7 +534,12 @@ app.get("/api/inbox", async (c) => {
   sql += " ORDER BY created_at ASC, id ASC";
   const { results } = await c.env.DB.prepare(sql).bind(...binds).all();
   const out = [];
-  for (const row of results) out.push(await mapInbox(c.env.DB, row));
+  for (const row of results) {
+    const mapped = await mapInbox(c.env.DB, row);
+    // Surface remapped label if DB still has a retired status (no delete).
+    mapped.status = normalizeInboxStatus(mapped.status, "new");
+    out.push(mapped);
+  }
   return c.json(out);
 });
 
@@ -529,7 +547,7 @@ app.post("/api/inbox", async (c) => {
   const b = await c.req.json();
   const name = String(b.name || "").trim();
   if (!name) return c.json({ error: "name required" }, 400);
-  const status = INBOX_STATUSES.has(b.status) ? b.status : "new";
+  const status = normalizeInboxStatus(b.status, "new");
   const res = await c.env.DB.prepare(
     `INSERT INTO lead_inbox
       (name, phone, email, address, notes, quotation, status, source, photos)
@@ -555,7 +573,10 @@ app.put("/api/inbox/:id", async (c) => {
   const prev = await c.env.DB.prepare("SELECT * FROM lead_inbox WHERE id=?1").bind(id).first();
   if (!prev) return c.json({ error: "not found" }, 404);
   const b = await c.req.json();
-  const status = INBOX_STATUSES.has(b.status) ? b.status : (prev.status || "new");
+  const status = normalizeInboxStatus(
+    b.status ?? prev.status,
+    normalizeInboxStatus(prev.status, "new")
+  );
   await c.env.DB.prepare(
     `UPDATE lead_inbox SET
       name=?1, phone=?2, email=?3, address=?4, notes=?5,
