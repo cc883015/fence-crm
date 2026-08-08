@@ -9,6 +9,11 @@ export function RequireAdmin({ children }) {
   return children;
 }
 
+function navClass(extra = "") {
+  return ({ isActive }) =>
+    ["navlink", extra, isActive ? "on" : ""].filter(Boolean).join(" ");
+}
+
 export default function AdminLayout() {
   const { logout } = useAuth();
   return (
@@ -19,34 +24,16 @@ export default function AdminLayout() {
           <span>NOVA CRM</span>
         </Link>
         <div className="admin-links">
-          <div className="admin-priority-group" aria-label="Daily tools">
-            <NavLink
-              className={({ isActive }) => (isActive ? "navlink on" : "navlink")}
-              to="/admin/checklist"
-            >
-              每日必查清单
-            </NavLink>
-            <NavLink
-              className={({ isActive }) =>
-                `navlink navlink-alert${isActive ? " on" : ""}`
-              }
-              to="/admin/prices"
-            >
-              常见产品报价参考
-            </NavLink>
-            <NavLink
-              className={({ isActive }) =>
-                `navlink navlink-alert${isActive ? " on" : ""}`
-              }
-              to="/admin/appointments"
-            >
-              测量
-            </NavLink>
-          </div>
-          <NavLink
-            className={({ isActive }) => `navlink navlink-alert${isActive ? " on" : ""}`}
-            to="/admin/inbox"
-          >
+          <NavLink className={navClass()} to="/admin/checklist">
+            每日必查清单
+          </NavLink>
+          <NavLink className={navClass()} to="/admin/prices">
+            常见产品报价参考
+          </NavLink>
+          <NavLink className={navClass("navlink-blue")} to="/admin/appointments">
+            测量系统
+          </NavLink>
+          <NavLink className={navClass("navlink-alert")} to="/admin/inbox">
             来客跟进
           </NavLink>
           <Link className="navlink" to="/">官网</Link>
