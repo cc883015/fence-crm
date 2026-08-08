@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api.js";
 
 const STATUSES = [
@@ -8,6 +9,14 @@ const STATUSES = [
   { id: "deposit_paid", zh: "已付定金" },
   { id: "done", zh: "已完工" },
 ];
+
+/** Kept on the page filter row; the other three live in the top nav. */
+const PAGE_FILTERS = [
+  { id: "all", zh: "全部" },
+  { id: "done", zh: "已完工" },
+];
+
+const VALID_FILTERS = new Set(["all", "new", "quoted", "deposit_paid", "done"]);
 
 const ACTION_LABEL = {
   create: "新建",
@@ -57,9 +66,17 @@ function formatWhen(iso) {
 }
 
 export default function LeadInbox() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawStatus = searchParams.get("status");
+  const filter = VALID_FILTERS.has(rawStatus) ? rawStatus : "all";
+
+  const setFilter = (id) => {
+    if (!id || id === "all") setSearchParams({}, { replace: true });
+    else setSearchParams({ status: id }, { replace: true });
+  };
+
   const [list, setList] = useState([]);
   const [logs, setLogs] = useState([]);
-  const [filter, setFilter] = useState("all");
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(null);
@@ -404,14 +421,7 @@ export default function LeadInbox() {
       </form>
 
       <div className="toolbar inbox-filters">
-        <button
-          type="button"
-          className={`btn btn-sm ${filter === "all" ? "btn-primary" : "btn-ghost ts-glass"}`}
-          onClick={() => setFilter("all")}
-        >
-          全部
-        </button>
-        {STATUSES.map((s) => (
+        {PAGE_FILTERS.map((s) => (
           <button
             key={s.id}
             type="button"
@@ -419,7 +429,8 @@ export default function LeadInbox() {
             onClick={() => setFilter(s.id)}
           >
             {s.zh}
-            {filter === "all" && counts[s.id] ? ` · ${counts[s.id]}` : ""}
+            {s.id === "all" ? "" : (filter === "all" && counts[s.id] ? ` · ${counts[s.id]}` : "")}
+            {s.id === "done" && filter === "done" ? ` · ${list.length}` : ""}
           </button>
         ))}
       </div>
