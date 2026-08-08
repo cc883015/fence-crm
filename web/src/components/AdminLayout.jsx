@@ -13,6 +13,7 @@ const INBOX_STATUS_LINKS = [
   { status: "new", zh: "新咨询" },
   { status: "quoted", zh: "已发报价" },
   { status: "deposit_paid", zh: "已付定金" },
+  { status: "done", zh: "已完工" },
 ];
 
 export default function AdminLayout() {
