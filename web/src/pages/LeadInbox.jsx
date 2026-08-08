@@ -593,7 +593,7 @@ export default function LeadInbox() {
                   来客备份预览 · {exportPreview.count} 条
                 </h3>
                 <p className="muted" style={{ margin: "0.35rem 0 0" }}>
-                  文字在左、照片在最右一列（正方形竖排）。滑轮或拖动滚动条可往右看图。
+                  文字在左；照片等比例完整放入右侧正方形。已付定金为绿色。滑轮或拖动可往右看图。
                 </p>
               </div>
               <div className="toolbar" style={{ margin: 0 }}>
