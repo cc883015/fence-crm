@@ -27,9 +27,14 @@ export default function AdminLayout() {
   return (
     <div className="admin-shell">
       <nav className="admin-nav ts-glass">
-        <Link to="/" className="brand">
-          <span className="brand-mark">N</span>
-          <span>NOVA CRM</span>
+        <Link to="/" className="brand" aria-label="NOVA FENCE">
+          <img
+            className="brand-logo brand-logo-admin"
+            src="/nova-fence-logo.png"
+            alt="NOVA FENCE"
+            width="200"
+            height="44"
+          />
         </Link>
         <div className="admin-links">
           <NavLink
