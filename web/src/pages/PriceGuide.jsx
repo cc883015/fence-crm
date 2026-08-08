@@ -1,35 +1,144 @@
 import React from "react";
 
-/** Unit prices from NOVA Fence quotes / Xero (AUD, before GST unless noted). */
+/** Unit sale prices from Xero (AUD). Confirm GST / site extras before locking a quote. */
 const SECTIONS = [
   {
-    id: "fences-gates",
-    title_zh: "栅栏 & 门",
-    title_en: "Fences & Gates",
+    id: "fences",
+    title_zh: "栅栏 Fences",
+    title_en: "Fence panels",
     rows: [
       {
         code: "HF2B00",
-        desc_zh: "横板围栏 · 2400×1185 · Black Gloss · Full Pack",
-        desc_en: "Horizontal slat fence - 2400*1185 - Black Gloss - Full Pack",
-        price: 339.9,
+        desc_zh: "横板围栏 · 2400×1185 · Black / Grey Gloss",
+        desc_en: "Horizontal slat fence - 2400*1185",
+        price: 309,
       },
+      {
+        code: "HF8B00",
+        desc_zh: "横板围栏 · 2400×1800 · Black / Grey Gloss",
+        desc_en: "Horizontal slat fence - 2400*1800",
+        price: 389,
+      },
+      {
+        code: "HF8B02",
+        desc_zh: "横板围栏 · 2400×1500 · Black Gloss",
+        desc_en: "Horizontal slat fence - 2400*1500",
+        price: 389,
+      },
+      {
+        code: "VB060",
+        desc_zh: "刀片围栏 · 2400×600",
+        desc_en: "Vertical Blade Fence - 2400*600",
+        price: 260,
+      },
+      {
+        code: "VB150",
+        desc_zh: "刀片围栏 · 2400×1500",
+        desc_en: "Vertical Blade Fence - 2400*1500",
+        price: 450,
+      },
+      {
+        code: "VF2B00",
+        desc_zh: "刀片围栏 · 2400×1200 · Black Gloss / Grey Matte",
+        desc_en: "Vertical blade fence - 2400*1200",
+        price: 479,
+      },
+      {
+        code: "VF8B00",
+        desc_zh: "刀片围栏 · 2400×1800 · Black Gloss / Grey Matte",
+        desc_en: "Vertical blade fence - 2400*1800",
+        price: 659,
+      },
+      {
+        code: "ZF2B00",
+        desc_zh: "竖条围栏 · 2365×1200 · Black / Grey · Gloss / Matte",
+        desc_en: "Vertical batten fence - 2365*1200",
+        price: 480,
+      },
+      {
+        code: "ZF8B00",
+        desc_zh: "竖条围栏 · 2365×1800 · Black / Grey · Gloss / Matte",
+        desc_en: "Vertical batten fence - 2365*1800",
+        price: 550,
+      },
+    ],
+  },
+  {
+    id: "gates",
+    title_zh: "门 Gates",
+    title_en: "Side, pedestrian & sliding gates",
+    rows: [
       {
         code: "HD8B00",
-        desc_zh: "横板侧门 · 1000×1800 · Black Gloss · Full Pack",
-        desc_en: "Horizontal slat side gate - 1000*1800 - Black Gloss - Full Pack",
-        price: 482.9,
+        desc_zh: "横板侧门 · 1000×1800 · Black / Grey Gloss",
+        desc_en: "Horizontal slat side gate - 1000*1800",
+        price: 439,
       },
       {
-        code: "—",
+        code: "VD9B00",
+        desc_zh: "刀片侧门 · 1000×1800 · Black Gloss / Grey Matte",
+        desc_en: "Vertical blade side gate - 1000*1800",
+        price: 490,
+      },
+      {
+        code: "VBG150",
+        desc_zh: "刀片行人门 · 1000×1500",
+        desc_en: "Vertical Blade Pedestrian Gate 1000*1500",
+        price: 420,
+      },
+      {
+        code: "ZD8B00",
+        desc_zh: "竖条侧门 · 1000×1800 · Black / Grey · Gloss / Matte",
+        desc_en: "Vertical batten side gate - 1000*1800",
+        price: 450,
+      },
+      {
+        code: "HS4B",
+        desc_zh: "横板推拉门 · 4500×1757 · Black / Grey",
+        desc_en: "Horizontal slat Sliding gate - 4500*1757",
+        price: 3300,
+      },
+      {
+        code: "HS8B",
+        desc_zh: "横板推拉门 · 4500×1800 · Black",
+        desc_en: "Horizontal slat Sliding gate - 4500*1800 - Black",
+        price: 3300,
+      },
+      {
+        code: "Gate",
         desc_zh: "横板推拉门 · 6000mm",
         desc_en: "Horizontal Slat Sliding Gate 6000mm Gate",
-        price: 4400,
+        price: 4000,
       },
       {
-        code: "—",
-        desc_zh: "横板推拉门 · 4500×1800 · Black（双开定制）",
-        desc_en: "Horizontal slat Sliding gate - 4500*1800 - Black (double gate, custom)",
-        price: 3630,
+        code: "VS4G",
+        desc_zh: "刀片推拉门 · 4500×1800 · Black / Grey",
+        desc_en: "Vertical blade Sliding gate - 4500*1800",
+        price: 4800,
+      },
+      {
+        code: "VS6B",
+        desc_zh: "刀片推拉门 · 6000×1800 · Black / Grey",
+        desc_en: "Vertical blade Sliding gate - 6000*1800",
+        price: 5800,
+      },
+      {
+        code: "VLSG",
+        desc_zh: "刀片推拉门 · 6000×2000 · Black",
+        desc_en: "Vertical blade Sliding gate - 6000*2000 - Black",
+        price: 6000,
+      },
+      {
+        code: "ZS4B",
+        desc_zh: "竖条推拉门 · 4500×1800 · Black / Grey",
+        desc_en: "Vertical batten Sliding gate - 4500*1800",
+        price: 4200,
+      },
+      {
+        code: "ZS6B",
+        desc_zh: "竖条推拉门 · 6000×1800 · Black / Grey",
+        desc_en: "Vertical batten Sliding gate - 6000*1800",
+        price: 5000,
       },
     ],
   },
@@ -39,22 +148,28 @@ const SECTIONS = [
     title_en: "Posts",
     rows: [
       {
-        code: "FP4B00",
-        desc_zh: "埋地柱 · 65×65×2400 · Black Gloss · Full Pack",
-        desc_en: "Inground post - 65*65*2400 - Black Gloss - Full Pack",
-        price: 59,
+        code: "DP5B00",
+        desc_zh: "侧门柱 · 50×50×1900 · 各色 Gloss / Matte",
+        desc_en: "Side gate post - 50*50*1900",
+        price: 55,
       },
       {
-        code: "OP5B00",
-        desc_zh: "侧门柱 · 50×50×1900 · Black Gloss · Full Pack",
-        desc_en: "Side gate post - 50*50*1900 - Black Gloss - Full Pack",
-        price: 60.5,
+        code: "DP6B00",
+        desc_zh: "侧门柱 · 65×65×1900 · 各色 Gloss / Matte",
+        desc_en: "Side gate post - 65*65*1900",
+        price: 55,
       },
       {
-        code: "B00",
-        desc_zh: "推拉门柱 · 100×100×1950 · Black Gloss · Full Pack",
-        desc_en: "Sliding gate post - 100*100*1950 - Black Gloss - Full Pack",
-        price: 308,
+        code: "SP1B00",
+        desc_zh: "推拉门柱 · 100×100×1950 · 各色 Gloss / Matte",
+        desc_en: "Sliding gate post - 100*100*1950",
+        price: 280,
+      },
+      {
+        code: "ZCAB00",
+        desc_zh: "推拉门柱套装 · 6000 · 各色 Full Pack",
+        desc_en: "Sliding gate post - 6000 - Full Pack",
+        price: 45,
       },
     ],
   },
@@ -65,27 +180,21 @@ const SECTIONS = [
     rows: [
       {
         code: "fenceparts",
-        desc_zh: "围栏支架 40×40 · 四只装 + 12 螺丝",
-        desc_en: "Fence Brackets (40 x 40mm) - Pack of Four, including 12 screws",
-        price: 22,
+        desc_zh: "围栏支架 40×40 · Black · 四只装",
+        desc_en: "Fence Brackets (40 x 40mm) - Black - Pack of Four",
+        price: 20,
       },
       {
-        code: "1138",
-        desc_zh: "铰链 Hinges",
-        desc_en: "hinges",
-        price: 42.46,
-      },
-      {
-        code: "1139",
-        desc_zh: "锁 Lock",
-        desc_en: "lock",
-        price: 117.13,
-      },
-      {
-        code: "S1",
+        code: "PARTS1",
         desc_zh: "推拉门配件套装",
-        desc_en: "Sliding Gate Accessories — Track rail ($60) + Base Wheel ($88) + Stopper ($20) + Guide ($20) + Buffer Lock ($10)",
-        price: 217.8,
+        desc_en: "Sliding Gate Accessories",
+        price: 198,
+      },
+      {
+        code: "parts2",
+        desc_zh: "推拉门零件套装",
+        desc_en: "Sliding Gate Parts",
+        price: 258,
       },
     ],
   },
@@ -121,13 +230,18 @@ export default function PriceGuide() {
           <p className="ts-eyebrow">Quick quote · 报价参考</p>
           <h2 style={{ margin: "0.2rem 0 0" }}>常见产品报价参考</h2>
           <p className="muted">
-            来自 NOVA 报价单 / Xero 单价（AUD，未含 GST；GST +10%）。电话粗估用，以实测正式报价为准。
+            来自 Xero 销售价（AUD）。同尺寸不同颜色 / 光面哑光多数同价，表中只列常用规格。电话粗估用，以实测正式报价为准；GST 另计 +10%。
           </p>
         </div>
       </div>
 
       {SECTIONS.map((sec) => (
-        <section key={sec.id} className={`price-section ts-glass ${sec.id === "fences-gates" ? "price-section-priority" : ""}`}>
+        <section
+          key={sec.id}
+          className={`price-section ts-glass ${
+            sec.id === "fences" || sec.id === "gates" ? "price-section-priority" : ""
+          }`}
+        >
           <div className="price-section-head">
             <h3>
               {sec.title_zh}
@@ -164,8 +278,9 @@ export default function PriceGuide() {
       ))}
 
       <p className="muted" style={{ marginTop: "0.85rem", fontSize: "0.85rem" }}>
-        Notes: Sliding gate accessories kit breakdown — Track rail $60 · Base Wheel $88 · Stopper $20 · Guide $20 · Buffer Lock $10 (= $217.80).
-        Custom double-gate posts may match B00 unit price. Xero may show slightly different list prices on some SKUs — confirm before locking a quote.
+        Notes: Same size / colour variants usually share one sale price in Xero.
+        Sliding-gate accessory kits are PARTS1 ($198) and parts2 ($258) — pick the kit that matches the job.
+        Skip $0 sale items (e.g. GTA000, some custom SKUs) until Xero is corrected.
       </p>
     </div>
   );
