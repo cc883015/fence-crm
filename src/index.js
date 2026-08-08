@@ -534,31 +534,47 @@ async function logInbox(db, { leadId = null, leadName = "", action, detail = "" 
   await db.prepare(
     `INSERT INTO lead_inbox_logs (lead_id, lead_name, action, detail)
      VALUES (?1,?2,?3,?4)`
-  ).bind(leadId, String(leadName || "").slice(0, 120), action, String(detail || "").slice(0, 500)).run();
+  ).bind(leadId, String(leadName || "").slice(0, 120), action, String(detail || "").slice(0, 4000)).run();
+}
+
+const INBOX_FIELD_LABELS = {
+  name: "姓名",
+  phone: "电话",
+  email: "邮箱",
+  address: "地址",
+  notes: "备注",
+  quotation: "报价号",
+  status: "状态",
+  source: "来源",
+};
+
+function formatInboxValue(key, value) {
+  const v = String(value ?? "").trim();
+  if (!v) return "（空）";
+  if (key === "status") return INBOX_STATUS_LABEL[v] || v;
+  return v;
+}
+
+/** Full snapshot of a lead for create/delete audit lines. */
+function inboxSnapshot(row, { photoNames = [] } = {}) {
+  const parts = Object.entries(INBOX_FIELD_LABELS).map(([k, label]) => {
+    return `${label}：${formatInboxValue(k, row[k])}`;
+  });
+  if (photoNames.length) {
+    parts.push(`照片（${photoNames.length}）：${photoNames.join("、")}`);
+  } else if (row._photoCount != null) {
+    parts.push(`照片：${row._photoCount} 张`);
+  }
+  return parts.join("；");
 }
 
 function inboxFieldDiffs(prev, next) {
-  const labels = {
-    name: "姓名",
-    phone: "电话",
-    email: "邮箱",
-    address: "地址",
-    notes: "备注",
-    quotation: "报价号",
-    status: "状态",
-    source: "来源",
-  };
   const parts = [];
-  for (const [k, label] of Object.entries(labels)) {
-    const a = String(prev[k] ?? "");
-    const b = String(next[k] ?? "");
+  for (const [k, label] of Object.entries(INBOX_FIELD_LABELS)) {
+    const a = String(prev[k] ?? "").trim();
+    const b = String(next[k] ?? "").trim();
     if (a === b) continue;
-    if (k === "status") {
-      parts.push(`${label} ${INBOX_STATUS_LABEL[a] || a}→${INBOX_STATUS_LABEL[b] || b}`);
-    } else {
-      const short = (v) => (v.length > 40 ? `${v.slice(0, 40)}…` : v) || "（空）";
-      parts.push(`${label} ${short(a)}→${short(b)}`);
-    }
+    parts.push(`${label} ${formatInboxValue(k, a)}→${formatInboxValue(k, b)}`);
   }
   return parts;
 }
@@ -609,7 +625,7 @@ app.post("/api/inbox", async (c) => {
     leadId: row.id,
     leadName: row.name,
     action: "create",
-    detail: `新建来客 · ${INBOX_STATUS_LABEL[row.status] || row.status}${row.source ? ` · ${row.source}` : ""}`,
+    detail: `新建来客 → ${inboxSnapshot(row)}`,
   });
   return c.json(await mapInbox(c.env.DB, row));
 });
@@ -672,19 +688,21 @@ app.put("/api/inbox/:id", async (c) => {
 app.delete("/api/inbox/:id", async (c) => {
   const id = c.req.param("id");
   const prev = await c.env.DB.prepare(
-    "SELECT id, name FROM lead_inbox WHERE id=?1"
+    "SELECT id, name, phone, email, address, notes, quotation, status, source, created_at FROM lead_inbox WHERE id=?1"
   ).bind(id).first();
   if (!prev) return c.json({ error: "not found" }, 404);
-  const photoCount = (await c.env.DB.prepare(
-    "SELECT COUNT(*) n FROM lead_photos WHERE lead_id=?1"
-  ).bind(id).first())?.n || 0;
+  const { results: photoRows } = await c.env.DB.prepare(
+    "SELECT name FROM lead_photos WHERE lead_id=?1 ORDER BY created_at ASC"
+  ).bind(id).all();
+  const photoNames = (photoRows || []).map((p, i) => p.name || `照片${i + 1}`);
+  const snapshot = inboxSnapshot(prev, { photoNames });
   await c.env.DB.prepare("DELETE FROM lead_photos WHERE lead_id=?1").bind(id).run();
   await c.env.DB.prepare("DELETE FROM lead_inbox WHERE id=?1").bind(id).run();
   await logInbox(c.env.DB, {
     leadId: prev.id,
     leadName: prev.name,
     action: "delete",
-    detail: `删除来客${photoCount ? `（含 ${photoCount} 张照片）` : ""}`,
+    detail: `删除来客 → ${snapshot}`,
   });
   return c.json({ ok: true });
 });
@@ -724,7 +742,7 @@ app.post("/api/inbox/:id/photos", async (c) => {
     leadId: prev.id,
     leadName: prev.name,
     action: "photo_add",
-    detail: `上传照片 ${photoName}`,
+    detail: `上传照片 → 文件名：${photoName}；来客：${prev.name}；当前共 ${count + 1} 张`,
   });
   const photos = await listPhotosForLead(c.env.DB, id);
   return c.json({ ok: true, photo: photoMeta(id, { id: photoId, name: photoName, thumb: thumb || dataUrl }), photos });
@@ -755,7 +773,7 @@ app.delete("/api/inbox/:id/photos/:photoId", async (c) => {
     leadId: lead?.id || Number(id),
     leadName: lead?.name || "",
     action: "photo_delete",
-    detail: `删除照片 ${photo.name || photoId}`,
+    detail: `删除照片 → 文件名：${photo.name || photoId}；来客：${lead?.name || "—"}；照片ID：${photoId}`,
   });
   const photos = await listPhotosForLead(c.env.DB, id);
   return c.json({ ok: true, photos });

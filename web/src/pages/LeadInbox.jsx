@@ -252,7 +252,7 @@ export default function LeadInbox() {
             <span className="muted" style={{ fontSize: "1rem", fontWeight: 500 }}> · {list.length}</span>
           </h2>
           <p className="muted">
-            从各平台复制客户信息粘贴进来。删除来客或照片需两次确认。下方可查看操作记录。
+            从各平台复制客户信息粘贴进来。删除来客或照片需两次确认。下方操作记录会写明新建/删除的完整字段。
           </p>
         </div>
       </div>

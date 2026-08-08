@@ -1590,10 +1590,10 @@ button, input, select, textarea { font: inherit; }
 }
 .inbox-log-item {
   display: grid;
-  grid-template-columns: 7.5rem 5.5rem minmax(4rem, 7rem) 1fr;
-  gap: 0.5rem 0.65rem;
+  grid-template-columns: 7.5rem 5.5rem minmax(4rem, 1fr);
+  gap: 0.35rem 0.65rem;
   align-items: baseline;
-  padding: 0.45rem 0.55rem;
+  padding: 0.55rem 0.65rem;
   border-radius: 0.55rem;
   background: oklch(0.97 0.005 255 / 0.7);
   font-size: 0.86rem;
@@ -1609,7 +1609,13 @@ button, input, select, textarea { font: inherit; }
 .inbox-log-action.action-photo_add { color: #087443; }
 .inbox-log-action.action-update { color: #175cd3; }
 .inbox-log-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.inbox-log-detail { overflow-wrap: anywhere; }
+.inbox-log-detail {
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  font-size: 0.82rem;
+}
 
 .confirm-modal {
   position: fixed;
@@ -1687,5 +1693,5 @@ button, input, select, textarea { font: inherit; }
   .inbox-log-item {
     grid-template-columns: 1fr 1fr;
   }
-  .inbox-log-detail { grid-column: 1 / -1; }
+  .inbox-log-name { grid-column: 1 / -1; }
 }
