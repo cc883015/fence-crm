@@ -1656,22 +1656,31 @@ button, input, select, textarea { font: inherit; }
   padding: 1.15rem 1.2rem 1.2rem;
 }
 
+/* Portaled to document.body — always center against the viewport */
 .export-preview-modal {
   position: fixed;
   inset: 0;
-  z-index: 95;
+  z-index: 200;
   background: oklch(0.18 0.02 255 / 0.6);
-  display: grid;
-  place-items: center;
-  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 .export-preview-card {
-  width: min(1200px, 100%);
-  max-height: min(92vh, 900px);
+  width: min(1100px, calc(100vw - 2rem));
+  max-height: min(90vh, 880px);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   padding: 1rem 1.1rem 1.1rem;
   gap: 0.75rem;
+  background: #fff;
+  border: 1px solid oklch(0.85 0.01 255);
+  border-radius: 1rem;
+  box-shadow: 0 18px 50px oklch(0.2 0.02 255 / 0.28);
+  box-sizing: border-box;
 }
 .export-preview-head {
   display: flex;

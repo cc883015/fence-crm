@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../lib/api.js";
 
 const STATUSES = [
@@ -583,9 +584,9 @@ export default function LeadInbox() {
         )}
       </section>
 
-      {exportPreview && (
+      {exportPreview && createPortal(
         <div className="export-preview-modal" role="dialog" aria-modal="true">
-          <div className="export-preview-card ts-glass">
+          <div className="export-preview-card">
             <div className="export-preview-head">
               <div>
                 <p className="ts-eyebrow">Backup preview</p>
@@ -619,7 +620,8 @@ export default function LeadInbox() {
               <div ref={exportMountRef} />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {confirmDlg && (
