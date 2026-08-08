@@ -43,10 +43,13 @@ function googleMapsUrl(address) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || "")}`;
 }
 
-/** Opens Apple Maps (app on iOS/macOS) with the address in the search field. */
+/**
+ * Native Apple Maps app scheme (maps://).
+ * https://maps.apple.com often stays as a webpage inside WeChat / in-app browsers;
+ * maps:// asks the OS to open the Maps app with the address filled in.
+ */
 function appleMapsUrl(address) {
-  const q = encodeURIComponent(address || "");
-  return `https://maps.apple.com/?q=${q}`;
+  return `maps://?q=${encodeURIComponent(address || "")}`;
 }
 
 /** Prefer API fields, fall back to address-built links. */

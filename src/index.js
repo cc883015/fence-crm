@@ -349,8 +349,9 @@ function googleMapsUrl(address) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || "")}`;
 }
 
+/** Native Apple Maps app scheme — https://maps.apple.com often opens as a webpage in WeChat. */
 function appleMapsUrl(address) {
-  return `https://maps.apple.com/?q=${encodeURIComponent(address || "")}`;
+  return `maps://?q=${encodeURIComponent(address || "")}`;
 }
 
 function weekdayFromDate(dateStr) {
