@@ -10,13 +10,21 @@ const STATUSES = [
   { id: "done", zh: "已完工" },
 ];
 
-/** Kept on the page filter row; the other three live in the top nav. */
 const PAGE_FILTERS = [
   { id: "all", zh: "全部" },
+  { id: "new", zh: "新咨询" },
+  { id: "quoted", zh: "已发报价" },
+  { id: "deposit_paid", zh: "已付定金" },
   { id: "done", zh: "已完工" },
 ];
 
 const VALID_FILTERS = new Set(["all", "new", "quoted", "deposit_paid", "done"]);
+
+function inboxHeading(filter) {
+  if (filter === "all") return "来客跟进";
+  const hit = STATUSES.find((s) => s.id === filter);
+  return hit ? `来客跟进-${hit.zh}` : "来客跟进";
+}
 
 const ACTION_LABEL = {
   create: "新建",
@@ -345,13 +353,13 @@ export default function LeadInbox() {
       <div className="orders-head">
         <div>
           <p className="ts-eyebrow">Facebook · Phone · Walk-in</p>
-          <h2 style={{ margin: "0.2rem 0 0" }}>
-            来客跟进
-            <span className="muted" style={{ fontSize: "1rem", fontWeight: 500 }}> · {list.length}</span>
+          <h2 className="inbox-page-title">
+            {inboxHeading(filter)}
+            <span className="inbox-page-count"> · {list.length}</span>
           </h2>
-          <p className="muted">
+          <p className="inbox-page-desc muted">
             从各平台复制客户信息粘贴进来。删除来客或照片需两次确认。下方操作记录会写明新建/删除的完整字段。
-            可用「导出 PDF」预览备份表：文字加大，每条来客的照片横排在右侧；滑轮或拖动横向查看后再下载。
+            可用「导出 PDF」预览备份表；顶栏或下方筛选可跳转新咨询 / 已发报价 / 已付定金 / 已完工。
           </p>
         </div>
         <div className="toolbar" style={{ margin: 0 }}>
@@ -429,8 +437,8 @@ export default function LeadInbox() {
             onClick={() => setFilter(s.id)}
           >
             {s.zh}
-            {s.id === "all" ? "" : (filter === "all" && counts[s.id] ? ` · ${counts[s.id]}` : "")}
-            {s.id === "done" && filter === "done" ? ` · ${list.length}` : ""}
+            {filter === "all" && s.id !== "all" && counts[s.id] ? ` · ${counts[s.id]}` : ""}
+            {filter === s.id && s.id !== "all" ? ` · ${list.length}` : ""}
           </button>
         ))}
       </div>

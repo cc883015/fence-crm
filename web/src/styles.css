@@ -833,6 +833,26 @@ button, input, select, textarea { font: inherit; }
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
+.inbox-page-title {
+  margin: 0.25rem 0 0;
+  font-size: clamp(1.65rem, 3.2vw, 2.15rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #c62828;
+  line-height: 1.2;
+}
+.inbox-page-title .inbox-page-count {
+  font-size: 0.55em;
+  font-weight: 650;
+  color: oklch(0.45 0.04 25);
+  margin-left: 0.15rem;
+}
+.inbox-page-desc {
+  margin-top: 0.55rem;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  max-width: 52rem;
+}
 .search-bar {
   display: flex;
   align-items: center;
@@ -1257,7 +1277,9 @@ button, input, select, textarea { font: inherit; }
     gap: 0.65rem;
     margin-bottom: 0.75rem;
   }
-  .orders-head h2 { font-size: 1.2rem; }
+  .orders-head h2,
+  .inbox-page-title { font-size: 1.55rem; }
+  .inbox-page-desc { font-size: 0.95rem; }
   .orders-head .toolbar { width: 100%; }
   .orders-head .toolbar .btn { width: 100%; min-height: 2.75rem; }
   .search-bar { padding: 0.45rem 0.65rem; }
