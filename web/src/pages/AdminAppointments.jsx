@@ -39,8 +39,21 @@ function nextWeekdayDate(targetDay) {
   return d.toISOString().slice(0, 10);
 }
 
-function mapsUrl(address) {
+function googleMapsUrl(address) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || "")}`;
+}
+
+function appleMapsUrl(address) {
+  return `https://maps.apple.com/?q=${encodeURIComponent(address || "")}`;
+}
+
+/** Prefer API fields, fall back to address-built links. */
+function mapLinks(a) {
+  const addr = a?.address || "";
+  return {
+    google: a?.maps_url || googleMapsUrl(addr),
+    apple: a?.apple_maps_url || appleMapsUrl(addr),
+  };
 }
 
 function formatDateZh(dateStr) {
@@ -52,6 +65,7 @@ function formatDateZh(dateStr) {
 function shareText(a) {
   const wdKey = a.weekday || weekdayOf(a.appointment_date);
   const wdLabel = WEEKDAY_ZH[wdKey] || "";
+  const maps = mapLinks(a);
   const lines = [
     "📐 NOVA FENCE · 上门测量",
     "————————————",
@@ -59,7 +73,9 @@ function shareText(a) {
     `电话：${a.phone || "—"}`,
     `时间：${formatDateZh(a.appointment_date)}${wdLabel ? `（${wdLabel}）` : ""}${a.appointment_time ? ` ${a.appointment_time}` : ""}`,
     `地址：${a.address || "—"}`,
-    `地图：${a.maps_url || mapsUrl(a.address)}`,
+    "导航（任选）：",
+    `Google 地图：${maps.google}`,
+    `Apple 地图：${maps.apple}`,
   ];
   if (a.email) lines.push(`邮箱：${a.email}`);
   if (a.notes) lines.push(`备注：${a.notes}`);
@@ -122,7 +138,7 @@ function drawShareCard(canvas, a) {
 
   ctx.fillStyle = "#c9a227";
   ctx.font = "600 15px Outfit, sans-serif";
-  ctx.fillText("点击地址可打开 Google Maps · 周三 / 周六测量日", 40, H - 28);
+  ctx.fillText("文字卡片含 Google / Apple 地图链接 · 周三 / 周六测量日", 40, H - 28);
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -412,14 +428,14 @@ export default function AdminAppointments() {
                 placeholder="Street, Suburb QLD postcode"
               />
               {form.address.trim() && (
-                <a
-                  className="maps-link"
-                  href={mapsUrl(form.address)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  在 Google Maps 打开地址 ↗
-                </a>
+                <span className="maps-link-row">
+                  <a className="maps-link" href={googleMapsUrl(form.address)} target="_blank" rel="noreferrer">
+                    Google 地图 ↗
+                  </a>
+                  <a className="maps-link" href={appleMapsUrl(form.address)} target="_blank" rel="noreferrer">
+                    Apple 地图 ↗
+                  </a>
+                </span>
               )}
             </div>
             <div className="field" style={{ gridColumn: "1 / -1" }}>
@@ -486,11 +502,19 @@ export default function AdminAppointments() {
                 </button>
                 <a
                   className="btn btn-ghost ts-glass"
-                  href={preview.maps_url || mapsUrl(preview.address)}
+                  href={mapLinks(preview).google}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  打开地图
+                  Google 地图
+                </a>
+                <a
+                  className="btn btn-ghost ts-glass"
+                  href={mapLinks(preview).apple}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Apple 地图
                 </a>
               </div>
             </>
@@ -572,15 +596,15 @@ export default function AdminAppointments() {
                   </span>
                 </span>
                 <span className="appt-addr-notes">
-                  <a
-                    className="maps-link"
-                    href={a.maps_url || mapsUrl(a.address)}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {a.address}
-                  </a>
+                  <span className="appt-addr-line">{a.address}</span>
+                  <span className="maps-link-row" onClick={(e) => e.stopPropagation()}>
+                    <a className="maps-link" href={mapLinks(a).google} target="_blank" rel="noreferrer">
+                      Google
+                    </a>
+                    <a className="maps-link" href={mapLinks(a).apple} target="_blank" rel="noreferrer">
+                      Apple
+                    </a>
+                  </span>
                   <div className="appt-note-row" onClick={(e) => e.stopPropagation()}>
                     <input
                       className="appt-note-input"

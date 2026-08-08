@@ -345,8 +345,12 @@ app.post("/api/payments", async (c) => {
   return c.json({ ok: true, id: res.meta.last_row_id });
 });
 
-function mapsUrl(address) {
+function googleMapsUrl(address) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || "")}`;
+}
+
+function appleMapsUrl(address) {
+  return `https://maps.apple.com/?q=${encodeURIComponent(address || "")}`;
 }
 
 function weekdayFromDate(dateStr) {
@@ -362,7 +366,8 @@ function mapAppointment(row) {
   if (!row) return row;
   return {
     ...row,
-    maps_url: mapsUrl(row.address),
+    maps_url: googleMapsUrl(row.address),
+    apple_maps_url: appleMapsUrl(row.address),
   };
 }
 

@@ -1503,6 +1503,19 @@ a.product-shop-link:hover img {
   padding: 1.15rem 1.2rem 1.25rem;
   border-radius: 1.15rem;
 }
+.maps-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.9rem;
+  margin-top: 0.35rem;
+}
+.maps-link-row .maps-link { margin-top: 0; }
+.appt-addr-line {
+  display: block;
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}
 .maps-link {
   display: inline-block;
   margin-top: 0.35rem;
