@@ -66,6 +66,7 @@ export default function LeadInbox() {
   const [viewer, setViewer] = useState(null);
   // { kind, title, body, step, maxStep, payload }
   const [confirmDlg, setConfirmDlg] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -122,6 +123,25 @@ export default function LeadInbox() {
     } catch (ex) {
       setErr(String(ex.message || ex));
       load();
+    }
+  };
+
+  const exportPdf = async () => {
+    setExporting(true);
+    setErr("");
+    setOk("");
+    try {
+      // Always pull the full inbox for backup — ignore current status filter.
+      const rows = await api.inbox({});
+      const { exportInboxPdf } = await import("../lib/inboxPdf.js");
+      const result = await exportInboxPdf(rows, {
+        getPhoto: (leadId, photoId) => api.getInboxPhoto(leadId, photoId),
+      });
+      setOk(`PDF 已下载：${result.filename}（${result.rows} 行）`);
+    } catch (ex) {
+      setErr(String(ex.message || ex));
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -253,7 +273,19 @@ export default function LeadInbox() {
           </h2>
           <p className="muted">
             从各平台复制客户信息粘贴进来。删除来客或照片需两次确认。下方操作记录会写明新建/删除的完整字段。
+            可用「导出 PDF」把全部字段和照片按表格备份到本地。
           </p>
+        </div>
+        <div className="toolbar" style={{ margin: 0 }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={exporting}
+            onClick={exportPdf}
+            title="导出全部来客为横向 PDF 表格（含照片）"
+          >
+            {exporting ? "导出中…" : "导出 PDF（备份）"}
+          </button>
         </div>
       </div>
 
