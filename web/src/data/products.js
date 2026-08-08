@@ -1,3 +1,15 @@
+/** Official Shopify storefront — same-tab links from this CRM site. */
+export const SHOP = {
+  home: "https://novafence.au/",
+  fences: "https://novafence.au/collections/fence",
+  gates: "https://novafence.au/collections/gate",
+  posts: "https://novafence.au/collections/posts",
+  accessories: "https://novafence.au/collections/accessories",
+  all: "https://novafence.au/collections/all-products",
+  about: "https://novafence.au/pages/about-us",
+  contact: "https://novafence.au/pages/contact",
+};
+
 export const CATALOGUE = [
   {
     slug: "blade",
@@ -11,6 +23,7 @@ export const CATALOGUE = [
     image: "/products/blade.jpg",
     blurb_en: "Vertical blade panels — strong privacy with a modern silhouette.",
     blurb_zh: "竖向刀片板 — 强隐私与现代轮廓。",
+    shop_url: "https://novafence.au/products/grey-aluminium-fence-panel-1800mm-modern-slat-privacy-fencing",
   },
   {
     slug: "decorative",
@@ -24,6 +37,7 @@ export const CATALOGUE = [
     image: "/products/decorative.jpg",
     blurb_en: "35mm gap battens — more stylish, more privacy.",
     blurb_zh: "35mm 间隙竖条 — 更时尚，更私密。",
+    shop_url: "https://novafence.au/products/matte-grey-aluminium-slat-fence-panel-modern-stylish-design",
   },
   {
     slug: "horizontal",
@@ -37,6 +51,7 @@ export const CATALOGUE = [
     image: "/products/horizontal.jpg",
     blurb_en: "Horizontal slats with narrow 15mm gaps for maximum privacy.",
     blurb_zh: "横板 + 15mm 窄间隙，隐私更强。",
+    shop_url: "https://novafence.au/products/aluminium-batten-fence-panel-2-2m-wide-black",
   },
   {
     slug: "vertical-batten",
@@ -50,6 +65,7 @@ export const CATALOGUE = [
     image: "/products/vertical.jpg",
     blurb_en: "Uniform vertical battens — recommended 40mm gap.",
     blurb_zh: "均匀竖条 — 推荐 40mm 间隙。",
+    shop_url: "https://novafence.au/collections/fence",
   },
   {
     slug: "pedestrian-gate",
@@ -63,6 +79,7 @@ export const CATALOGUE = [
     image: "/products/gate.jpg",
     blurb_en: "Matching pedestrian gates — ready stock, premium finish.",
     blurb_zh: "配套行人门 — 现货，高品质表面。",
+    shop_url: "https://novafence.au/products/aluminium-garden-gate-pedestrian-entry-gate-small-fence-gate",
   },
   {
     slug: "brick-pillar",
@@ -76,6 +93,7 @@ export const CATALOGUE = [
     image: "/products/brick.jpg",
     blurb_en: "Brick pillars with fencing to the ground — looks great, cost effective.",
     blurb_zh: "砖柱 + 落地围栏 — 美观且性价比高。",
+    shop_url: "https://novafence.au/collections/fence",
   },
 ];
 
@@ -88,11 +106,12 @@ export const STYLE_OPTIONS = [
 
 export const CONTACT = {
   showroom: "NOVA FENCE SHOWROOM",
-  address: "Unit 2 / 24 Prebble Street, Rochedale QLD 4123",
+  address: "Unit 21 / 24 Prebble Street, Rochedale QLD 4123",
   phone: "07 2143 9126",
-  mobile: "0402 933 978",
+  mobile: "0402 933 979",
   email: "info@novafence.au",
-  web: "www.novafence.au",
+  web: "novafence.au",
+  web_url: "https://novafence.au/",
   areas: ["Brisbane", "Logan", "Ipswich", "Gold Coast"],
 };
 

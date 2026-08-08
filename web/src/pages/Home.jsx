@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLang, t } from "../context/LangContext.jsx";
-import { CATALOGUE, CONTACT } from "../data/products.js";
+import { CATALOGUE, CONTACT, SHOP } from "../data/products.js";
 import { api } from "../lib/api.js";
 
 const HERO_PERKS = [
@@ -110,7 +110,10 @@ export default function Home() {
           />
         </Link>
         <div className="header-actions">
-          <a className="btn btn-ghost btn-sm" href="#products">{t(lang, "Products", "产品")}</a>
+          <a className="btn btn-ghost btn-sm" href={SHOP.fences}>{t(lang, "Fences", "围栏")}</a>
+          <a className="btn btn-ghost btn-sm" href={SHOP.gates}>{t(lang, "Gates", "门")}</a>
+          <a className="btn btn-ghost btn-sm" href={SHOP.posts}>{t(lang, "Posts", "立柱")}</a>
+          <a className="btn btn-ghost btn-sm" href={SHOP.accessories}>{t(lang, "Accessories", "配件")}</a>
           <a className="btn btn-ghost btn-sm" href="#quote">{t(lang, "Quote", "报价")}</a>
           <div className="lang-switch" role="group" aria-label="Language">
             <button type="button" className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>EN</button>
@@ -171,8 +174,8 @@ export default function Home() {
               <span className="chip gold">Gaps 15–40mm</span>
               <span className="chip gold">Panels ~2.4m</span>
             </div>
-            <a className="btn btn-ghost hero-ghost" href="#products" style={{ marginTop: "1rem" }}>
-              {t(lang, "Browse products ↓", "浏览产品 ↓")}
+            <a className="btn btn-ghost hero-ghost" href={SHOP.all} style={{ marginTop: "1rem" }}>
+              {t(lang, "Browse shop →", "浏览官网商城 →")}
             </a>
 
             <ul className="hero-perks" aria-label={t(lang, "Why choose NOVA", "选择 NOVA 的好处")}>
@@ -261,8 +264,8 @@ export default function Home() {
           <p>
             {t(
               lang,
-              "Each photo matches the product — see gap, thickness and panel size at a glance.",
-              "每张图对应真实款式 — 间隙、厚度、板长一目了然。"
+              "Tap a product to open the matching page on novafence.au — same tab, like the main shop.",
+              "点击产品会在当前页打开 novafence.au 对应商品页，和官网一样原地跳转。"
             )}
           </p>
         </div>
@@ -287,16 +290,20 @@ export default function Home() {
         <div className="product-grid">
           {CATALOGUE.map((p) => (
             <article key={p.slug} className="ts-card product-card">
-              <div className="product-img-wrap">
+              <a className="product-img-wrap product-shop-link" href={p.shop_url} aria-label={p.name_en}>
                 <img src={p.image} alt={p.name_en} loading="lazy" />
                 <div className="product-img-glass">
                   <span className="chip gold">Gap {p.gap}</span>
                   <span className="chip">{p.thickness}</span>
                   <span className="chip">{p.panel}</span>
                 </div>
-              </div>
+              </a>
               <div className="product-body">
-                <h3>{t(lang, p.name_en, p.name_zh)}</h3>
+                <h3>
+                  <a className="product-title-link" href={p.shop_url}>
+                    {t(lang, p.name_en, p.name_zh)}
+                  </a>
+                </h3>
                 {lang === "zh" && <p className="zh">{p.name_en}</p>}
                 <p className="muted">{t(lang, p.blurb_en, p.blurb_zh)}</p>
                 <div className="specs">
@@ -307,21 +314,23 @@ export default function Home() {
                     <span className="chip" key={f}>{f}</span>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary"
-                  style={{ marginTop: "0.65rem" }}
-                  onClick={() => {
-                    if (["pedestrian-gate", "brick-pillar"].includes(p.slug)) {
+                <div className="product-actions">
+                  <a className="btn btn-sm btn-primary" href={p.shop_url}>
+                    {t(lang, "View on novafence.au", "官网查看详情")}
+                  </a>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => {
+                      if (!["pedestrian-gate", "brick-pillar"].includes(p.slug)) {
+                        set("fence_type", p.slug);
+                      }
                       document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" });
-                      return;
-                    }
-                    set("fence_type", p.slug);
-                    document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                >
-                  {t(lang, "Quote this style", "用此款报价")}
-                </button>
+                    }}
+                  >
+                    {t(lang, "Quote here", "本站报价")}
+                  </button>
+                </div>
               </div>
             </article>
           ))}
@@ -351,8 +360,22 @@ export default function Home() {
       <footer className="site-footer ts-glass-soft">
         <strong>{CONTACT.showroom}</strong>
         <span>{CONTACT.address}</span>
-        <span>Tel {CONTACT.phone} · Mobile {CONTACT.mobile}</span>
-        <span>{CONTACT.email} · {CONTACT.web}</span>
+        <span>
+          Tel {CONTACT.phone} · Mobile{" "}
+          <a href={`tel:${CONTACT.mobile.replace(/\s/g, "")}`}>{CONTACT.mobile}</a>
+        </span>
+        <span>
+          <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+          {" · "}
+          <a href={CONTACT.web_url}>{CONTACT.web}</a>
+        </span>
+        <nav className="footer-shop-links" aria-label="Shop">
+          <a href={SHOP.fences}>{t(lang, "Fences", "围栏")}</a>
+          <a href={SHOP.gates}>{t(lang, "Gates", "门")}</a>
+          <a href={SHOP.posts}>{t(lang, "Posts", "立柱")}</a>
+          <a href={SHOP.accessories}>{t(lang, "Accessories", "配件")}</a>
+          <a href={SHOP.about}>{t(lang, "About", "关于我们")}</a>
+        </nav>
         <span className="muted">
           {lang === "zh" ? "服务区域：" : "Serving "}
           <strong className="area-gold">Brisbane, Logan, Ipswich &amp; the Gold Coast</strong>
