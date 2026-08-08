@@ -635,17 +635,6 @@ button, input, select, textarea { font: inherit; }
   margin-bottom: 1rem;
 }
 .admin-links { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
-.admin-priority-group {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.35rem;
-  border-radius: 999px;
-  border: 1.5px solid oklch(0.55 0.18 25 / 0.55);
-  background: oklch(0.98 0.02 25 / 0.65);
-  box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.4);
-}
 .navlink {
   padding: 0.4rem 0.85rem;
   border-radius: 999px;
@@ -654,18 +643,24 @@ button, input, select, textarea { font: inherit; }
   font-size: 0.92rem;
 }
 .navlink.on, .navlink:hover { background: oklch(1 0 0 / 0.55); color: var(--color-brand); }
+/* Same pill shape; only text color differs for key entries */
 .navlink-alert {
   color: #c62828 !important;
-  font-weight: 750;
+  font-weight: 700;
 }
 .navlink-alert.on,
 .navlink-alert:hover {
   background: oklch(0.94 0.04 25) !important;
   color: #b71c1c !important;
 }
-.admin-priority-group .navlink.on:not(.navlink-alert) {
-  background: oklch(1 0 0 / 0.75);
-  color: var(--color-brand);
+.navlink-blue {
+  color: #1565c0 !important;
+  font-weight: 700;
+}
+.navlink-blue.on,
+.navlink-blue:hover {
+  background: oklch(0.94 0.04 250) !important;
+  color: #0d47a1 !important;
 }
 
 .checklist-panel {
@@ -1219,13 +1214,9 @@ button, input, select, textarea { font: inherit; }
     -webkit-overflow-scrolling: touch;
     padding-bottom: 0.15rem;
   }
-  .admin-links .navlink,
-  .admin-priority-group {
+  .admin-links .navlink {
     white-space: nowrap;
     flex-shrink: 0;
-  }
-  .admin-priority-group {
-    border-radius: 0.85rem;
   }
   .orders-head h2 { font-size: 1.25rem; }
   .search-bar { padding: 0.45rem 0.65rem; }
