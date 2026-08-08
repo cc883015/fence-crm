@@ -43,8 +43,10 @@ function googleMapsUrl(address) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || "")}`;
 }
 
+/** Opens Apple Maps (app on iOS/macOS) with the address in the search field. */
 function appleMapsUrl(address) {
-  return `https://maps.apple.com/?q=${encodeURIComponent(address || "")}`;
+  const q = encodeURIComponent(address || "");
+  return `https://maps.apple.com/?q=${q}`;
 }
 
 /** Prefer API fields, fall back to address-built links. */
@@ -73,7 +75,6 @@ function shareText(a) {
     `电话：${a.phone || "—"}`,
     `时间：${formatDateZh(a.appointment_date)}${wdLabel ? `（${wdLabel}）` : ""}${a.appointment_time ? ` ${a.appointment_time}` : ""}`,
     `地址：${a.address || "—"}`,
-    "导航（任选）：",
     `Google 地图：${maps.google}`,
     `Apple 地图：${maps.apple}`,
   ];
@@ -138,7 +139,7 @@ function drawShareCard(canvas, a) {
 
   ctx.fillStyle = "#c9a227";
   ctx.font = "600 15px Outfit, sans-serif";
-  ctx.fillText("文字卡片含 Google / Apple 地图链接 · 周三 / 周六测量日", 40, H - 28);
+  ctx.fillText("文字含 Google / Apple 地图链接（点开即带地址）· 周三/周六", 40, H - 28);
 }
 
 function roundRect(ctx, x, y, w, h, r) {
