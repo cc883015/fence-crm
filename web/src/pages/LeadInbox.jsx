@@ -338,7 +338,10 @@ export default function LeadInbox() {
           </div>
         ) : (
           list.map((row, idx) => (
-            <article key={row.id} className="inbox-card ts-glass">
+            <article
+              key={row.id}
+              className={`inbox-card ts-glass${row.status === "deposit_paid" ? " inbox-card-deposit" : ""}`}
+            >
               <div className="inbox-seq">#{idx + 1}</div>
               <div className="inbox-main">
                 <div className="inbox-fields">

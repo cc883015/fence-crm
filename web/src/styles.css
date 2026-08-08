@@ -1477,6 +1477,31 @@ button, input, select, textarea { font: inherit; }
   align-items: stretch;
   min-height: 11rem;
 }
+/* Paid deposit — soft green pulse around the card */
+.inbox-card-deposit {
+  border: 2px solid #22a06b;
+  box-shadow:
+    0 0 0 1px oklch(0.72 0.14 155 / 0.35),
+    0 0 18px oklch(0.72 0.14 155 / 0.35);
+  animation: inbox-deposit-pulse 1.8s ease-in-out infinite;
+}
+@keyframes inbox-deposit-pulse {
+  0%, 100% {
+    border-color: #1f9d66;
+    box-shadow:
+      0 0 0 1px oklch(0.7 0.15 155 / 0.3),
+      0 0 10px oklch(0.7 0.15 155 / 0.25);
+  }
+  50% {
+    border-color: #3dd68c;
+    box-shadow:
+      0 0 0 3px oklch(0.78 0.16 155 / 0.55),
+      0 0 28px oklch(0.78 0.16 155 / 0.55);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .inbox-card-deposit { animation: none; }
+}
 .inbox-seq {
   font-family: var(--font-mono);
   font-weight: 800;
