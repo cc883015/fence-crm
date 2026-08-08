@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 
 const STATUSES = [
@@ -67,6 +67,14 @@ export default function LeadInbox() {
   // { kind, title, body, step, maxStep, payload }
   const [confirmDlg, setConfirmDlg] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [exportPreview, setExportPreview] = useState(null); // { stamp, count, filenameHint }
+  const exportMountRef = useRef(null);
+  const exportScrollRef = useRef(null);
+  const exportRootRef = useRef(null);
+  const pendingExportRootRef = useRef(null);
+  const bindWheelFnRef = useRef(null);
+  const unbindWheelRef = useRef(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -126,22 +134,73 @@ export default function LeadInbox() {
     }
   };
 
-  const exportPdf = async () => {
+  const closeExportPreview = () => {
+    unbindWheelRef.current?.();
+    unbindWheelRef.current = null;
+    if (exportMountRef.current) exportMountRef.current.innerHTML = "";
+    exportRootRef.current = null;
+    pendingExportRootRef.current = null;
+    setExportPreview(null);
+  };
+
+  const openExportPreview = async () => {
     setExporting(true);
     setErr("");
     setOk("");
     try {
-      // Always pull the full inbox for backup — ignore current status filter.
       const rows = await api.inbox({});
-      const { exportInboxPdf } = await import("../lib/inboxPdf.js");
-      const result = await exportInboxPdf(rows, {
+      const {
+        buildInboxExportTable,
+        bindHorizontalWheel,
+      } = await import("../lib/inboxPdf.js");
+      const { root, stamp, count } = await buildInboxExportTable(rows, {
         getPhoto: (leadId, photoId) => api.getInboxPhoto(leadId, photoId),
       });
-      setOk(`PDF 已下载：${result.filename}（${result.rows} 行）`);
+      bindWheelFnRef.current = bindHorizontalWheel;
+      pendingExportRootRef.current = root;
+      setExportPreview({ stamp, count, filenameHint: `nova-inbox-${stamp}.pdf` });
+    } catch (ex) {
+      setErr(String(ex.message || ex));
+      closeExportPreview();
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!exportPreview || !pendingExportRootRef.current) return undefined;
+    const mount = exportMountRef.current;
+    const scroller = exportScrollRef.current;
+    const root = pendingExportRootRef.current;
+    pendingExportRootRef.current = null;
+    if (!mount || !scroller) return undefined;
+    mount.innerHTML = "";
+    mount.appendChild(root);
+    exportRootRef.current = root;
+    unbindWheelRef.current?.();
+    unbindWheelRef.current = bindWheelFnRef.current?.(scroller) || null;
+    return () => {
+      unbindWheelRef.current?.();
+      unbindWheelRef.current = null;
+    };
+  }, [exportPreview]);
+
+  const downloadExportPdf = async () => {
+    if (!exportRootRef.current || !exportPreview) return;
+    setPdfBusy(true);
+    setErr("");
+    try {
+      const { renderInboxTableToPdf } = await import("../lib/inboxPdf.js");
+      const result = await renderInboxTableToPdf(exportRootRef.current, {
+        filename: exportPreview.filenameHint,
+        stamp: exportPreview.stamp,
+      });
+      setOk(`PDF 已下载：${result.filename}（${exportPreview.count} 条）`);
+      closeExportPreview();
     } catch (ex) {
       setErr(String(ex.message || ex));
     } finally {
-      setExporting(false);
+      setPdfBusy(false);
     }
   };
 
@@ -273,7 +332,7 @@ export default function LeadInbox() {
           </h2>
           <p className="muted">
             从各平台复制客户信息粘贴进来。删除来客或照片需两次确认。下方操作记录会写明新建/删除的完整字段。
-            可用「导出 PDF」把全部字段和照片按表格备份到本地。
+            可用「导出 PDF」预览备份表：文字加大，照片在最右一列竖排；可用滑轮或拖动横向查看图片后再下载。
           </p>
         </div>
         <div className="toolbar" style={{ margin: 0 }}>
@@ -281,10 +340,10 @@ export default function LeadInbox() {
             type="button"
             className="btn btn-primary"
             disabled={exporting}
-            onClick={exportPdf}
-            title="导出全部来客为横向 PDF 表格（含照片）"
+            onClick={openExportPreview}
+            title="预览备份表（可横向滚动看照片）并下载 PDF"
           >
-            {exporting ? "导出中…" : "导出 PDF（备份）"}
+            {exporting ? "准备中…" : "导出 PDF（备份）"}
           </button>
         </div>
       </div>
@@ -523,6 +582,45 @@ export default function LeadInbox() {
           </ul>
         )}
       </section>
+
+      {exportPreview && (
+        <div className="export-preview-modal" role="dialog" aria-modal="true">
+          <div className="export-preview-card ts-glass">
+            <div className="export-preview-head">
+              <div>
+                <p className="ts-eyebrow">Backup preview</p>
+                <h3 style={{ margin: "0.15rem 0 0" }}>
+                  来客备份预览 · {exportPreview.count} 条
+                </h3>
+                <p className="muted" style={{ margin: "0.35rem 0 0" }}>
+                  文字在左、照片在最右一列（正方形竖排）。滑轮或拖动滚动条可往右看图。
+                </p>
+              </div>
+              <div className="toolbar" style={{ margin: 0 }}>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  disabled={pdfBusy}
+                  onClick={closeExportPreview}
+                >
+                  关闭
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  disabled={pdfBusy}
+                  onClick={downloadExportPdf}
+                >
+                  {pdfBusy ? "生成中…" : "下载 PDF"}
+                </button>
+              </div>
+            </div>
+            <div className="export-preview-scroll" ref={exportScrollRef}>
+              <div ref={exportMountRef} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmDlg && (
         <div
