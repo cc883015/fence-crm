@@ -28,7 +28,8 @@ const empty = {
   source: "",
 };
 
-async function fileToCompressedDataUrl(file, maxSide = 1000, quality = 0.72) {
+/** Client-side resize + JPEG encode before D1 storage (keeps rows smaller). */
+async function fileToCompressedDataUrl(file, maxSide = 800, quality = 0.58) {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const w = Math.max(1, Math.round(bitmap.width * scale));
@@ -44,8 +45,8 @@ async function fileToCompressedDataUrl(file, maxSide = 1000, quality = 0.72) {
 
 async function fileToThumbAndFull(file) {
   const [thumb, dataUrl] = await Promise.all([
-    fileToCompressedDataUrl(file, 280, 0.62),
-    fileToCompressedDataUrl(file, 1000, 0.72),
+    fileToCompressedDataUrl(file, 220, 0.5),
+    fileToCompressedDataUrl(file, 800, 0.58),
   ]);
   return { thumb, dataUrl };
 }
