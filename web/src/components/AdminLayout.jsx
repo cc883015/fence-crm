@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -16,11 +16,29 @@ const INBOX_STATUS_LINKS = [
   { status: "done", zh: "已完工" },
 ];
 
+function currentNavLabel(pathname, inboxStatus) {
+  if (pathname.startsWith("/admin/checklist")) return "每日必查清单";
+  if (pathname.startsWith("/admin/prices")) return "常见产品报价参考";
+  if (pathname.startsWith("/admin/appointments")) return "测量系统";
+  if (pathname === "/admin/inbox") {
+    const hit = INBOX_STATUS_LINKS.find((s) => s.status === inboxStatus);
+    return hit ? `来客跟进 · ${hit.zh}` : "来客跟进";
+  }
+  if (pathname.startsWith("/admin")) return "后台";
+  return "菜单";
+}
+
 export default function AdminLayout() {
   const { logout } = useAuth();
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
   const inboxStatus = new URLSearchParams(location.search).get("status");
   const onInbox = location.pathname === "/admin/inbox";
+  const menuLabel = currentNavLabel(location.pathname, inboxStatus);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname, location.search]);
 
   const linkClass = (on) => `navlink${on ? " on" : ""}`;
 
@@ -36,7 +54,22 @@ export default function AdminLayout() {
             height="44"
           />
         </Link>
-        <div className="admin-links">
+
+        <button
+          type="button"
+          className={`admin-menu-toggle${menuOpen ? " is-open" : ""}`}
+          aria-expanded={menuOpen}
+          aria-controls="admin-nav-menu"
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          <span className="admin-menu-toggle-label">{menuLabel}</span>
+          <span className="admin-menu-caret" aria-hidden>▾</span>
+        </button>
+
+        <div
+          id="admin-nav-menu"
+          className={`admin-links${menuOpen ? " is-open" : ""}`}
+        >
           <NavLink
             className={({ isActive }) => linkClass(isActive)}
             to="/admin/checklist"
