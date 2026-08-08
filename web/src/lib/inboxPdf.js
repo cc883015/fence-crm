@@ -9,8 +9,8 @@ const STATUS_ZH = {
 };
 
 const MAX_PHOTOS = 6;
-/** Square edge (px) — large enough to read text on site photos. */
-const PHOTO_SIZE = 280;
+/** Square frame (px). Images scale proportionally inside (contain) so nothing is cropped. */
+const PHOTO_SIZE = 300;
 
 function esc(s) {
   return String(s ?? "")
@@ -61,19 +61,25 @@ async function photosColumnHtml(lead, getPhoto) {
   return `<td class="photo-col"><div class="photo-stack">${blocks.join("")}</div></td>`;
 }
 
+function statusCellHtml(status) {
+  const label = STATUS_ZH[status] || status || "";
+  const paid = status === "deposit_paid";
+  return `<td class="c-text c-status${paid ? " status-deposit-paid" : ""}">${esc(label)}</td>`;
+}
+
 async function buildRowsHtml(leads, getPhoto) {
   const rows = [];
   for (let i = 0; i < leads.length; i++) {
     const lead = leads[i];
     rows.push(`
-      <tr>
+      <tr class="${lead.status === "deposit_paid" ? "row-deposit-paid" : ""}">
         <td class="c-num">${i + 1}</td>
         <td class="c-text">${esc(lead.name)}</td>
         <td class="c-text">${esc(lead.phone)}</td>
         <td class="c-text">${esc(lead.email)}</td>
         <td class="c-text">${esc(lead.address)}</td>
         <td class="c-text">${esc(lead.quotation)}</td>
-        <td class="c-text">${esc(STATUS_ZH[lead.status] || lead.status)}</td>
+        ${statusCellHtml(lead.status)}
         <td class="c-text">${esc(lead.source)}</td>
         <td class="c-notes">${esc(lead.notes)}</td>
         <td class="c-text">${esc(formatWhen(lead.created_at))}</td>
@@ -139,6 +145,13 @@ function tableStyles() {
       min-width: 160px;
       max-width: 260px;
     }
+    .inbox-pdf-root .c-status.status-deposit-paid {
+      color: #0f7a45;
+      font-weight: 800;
+    }
+    .inbox-pdf-root tr.row-deposit-paid .c-status.status-deposit-paid {
+      color: #0f7a45;
+    }
     .inbox-pdf-root .photo-col {
       min-width: ${PHOTO_SIZE + 28}px;
       width: ${PHOTO_SIZE + 28}px;
@@ -162,13 +175,20 @@ function tableStyles() {
       width: ${PHOTO_SIZE}px;
       height: ${PHOTO_SIZE}px;
       flex: 0 0 ${PHOTO_SIZE}px;
-      background: #fff;
+      background: #ececec;
       border: 1px solid #777;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
+    /* Keep aspect ratio; fit entire image inside the square (no crop). */
     .inbox-pdf-root .photo-sq img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
       display: block;
     }
     .inbox-pdf-root .photo-sq.empty {
@@ -209,7 +229,8 @@ export async function buildInboxExportTable(leads, {
     <h1>${esc(title)}</h1>
     <p class="meta">
       导出时间 ${esc(stamp)} · 共 ${list.length} 条 ·
-      文字加大；照片在最右一列竖排正方形 · 预览可横向滚动查看图片
+      文字加大；照片等比例放入右侧正方形（完整可见、不裁切）·
+      「已付定金」绿色加粗 · 预览可横向滚动看图
     </p>
     <table>
       <thead>
