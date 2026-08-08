@@ -44,12 +44,15 @@ function googleMapsUrl(address) {
 }
 
 /**
- * Native Apple Maps app scheme (maps://).
- * https://maps.apple.com often stays as a webpage inside WeChat / in-app browsers;
- * maps:// asks the OS to open the Maps app with the address filled in.
+ * HTTPS bridge on our site (clickable in WeChat), then jumps into Apple Maps with the address.
+ * Raw maps:// is not auto-linked in WeChat group chats.
  */
 function appleMapsUrl(address) {
-  return `maps://?q=${encodeURIComponent(address || "")}`;
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "https://fence-crm.n12047805.workers.dev";
+  return `${origin}/go/apple-maps?q=${encodeURIComponent(address || "")}`;
 }
 
 /** Prefer API fields, fall back to address-built links. */
