@@ -332,7 +332,7 @@ export default function LeadInbox() {
           </h2>
           <p className="muted">
             从各平台复制客户信息粘贴进来。删除来客或照片需两次确认。下方操作记录会写明新建/删除的完整字段。
-            可用「导出 PDF」预览备份表：文字加大，照片在最右一列竖排；可用滑轮或拖动横向查看图片后再下载。
+            可用「导出 PDF」预览备份表：文字加大，每条来客的照片横排在右侧；滑轮或拖动横向查看后再下载。
           </p>
         </div>
         <div className="toolbar" style={{ margin: 0 }}>
@@ -593,7 +593,7 @@ export default function LeadInbox() {
                   来客备份预览 · {exportPreview.count} 条
                 </h3>
                 <p className="muted" style={{ margin: "0.35rem 0 0" }}>
-                  文字在左；照片等比例完整放入右侧正方形。已付定金为绿色。滑轮或拖动可往右看图。
+                  文字在左；同一来客的照片横排在右侧正方形里。已付定金为绿色。滑轮或拖动可往右看图。
                 </p>
               </div>
               <div className="toolbar" style={{ margin: 0 }}>

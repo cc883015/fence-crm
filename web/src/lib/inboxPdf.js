@@ -58,7 +58,7 @@ async function photosColumnHtml(lead, getPhoto) {
       </div>
     `);
   }
-  return `<td class="photo-col"><div class="photo-stack">${blocks.join("")}</div></td>`;
+  return `<td class="photo-col"><div class="photo-row">${blocks.join("")}</div></td>`;
 }
 
 function statusCellHtml(status) {
@@ -112,7 +112,7 @@ function tableStyles() {
     .inbox-pdf-root table {
       border-collapse: collapse;
       font-size: 15px;
-      min-width: 1400px;
+      min-width: ${1200 + (PHOTO_SIZE + 10) * MAX_PHOTOS}px;
     }
     .inbox-pdf-root th,
     .inbox-pdf-root td {
@@ -153,22 +153,25 @@ function tableStyles() {
       color: #0f7a45;
     }
     .inbox-pdf-root .photo-col {
-      min-width: ${PHOTO_SIZE + 28}px;
-      width: ${PHOTO_SIZE + 28}px;
+      min-width: ${(PHOTO_SIZE + 10) * MAX_PHOTOS + 24}px;
       background: #f7f7f7;
-      vertical-align: top;
+      vertical-align: middle;
     }
     .inbox-pdf-root .photo-col.empty {
       color: #888;
       text-align: center;
       vertical-align: middle;
       font-size: 14px;
+      min-width: 120px;
     }
-    .inbox-pdf-root .photo-stack {
+    /* All photos for a lead in one horizontal row */
+    .inbox-pdf-root .photo-row {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      flex-wrap: nowrap;
       gap: 10px;
       align-items: center;
+      justify-content: flex-start;
     }
     .inbox-pdf-root .photo-sq {
       position: relative;
@@ -213,7 +216,7 @@ function tableStyles() {
 }
 
 /**
- * Build the backup table DOM (text columns + one stacked square photo column).
+ * Build the backup table DOM (text columns + photos in one horizontal row).
  * Caller may mount it in a horizontally scrollable preview.
  */
 export async function buildInboxExportTable(leads, {
@@ -229,7 +232,7 @@ export async function buildInboxExportTable(leads, {
     <h1>${esc(title)}</h1>
     <p class="meta">
       导出时间 ${esc(stamp)} · 共 ${list.length} 条 ·
-      文字加大；照片等比例放入右侧正方形（完整可见、不裁切）·
+      文字加大；每条来客的照片横排在右侧 · 等比例装入正方形（不裁切）·
       「已付定金」绿色加粗 · 预览可横向滚动看图
     </p>
     <table>
