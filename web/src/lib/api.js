@@ -1,4 +1,5 @@
 const TOKEN_KEY = "nova_admin_token";
+const CREDS_KEY = "nova_admin_saved_creds";
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY) || "";
@@ -7,6 +8,36 @@ export function getToken() {
 export function setToken(t) {
   if (t) localStorage.setItem(TOKEN_KEY, t);
   else localStorage.removeItem(TOKEN_KEY);
+}
+
+/** Persist login form values on this device (admin CRM convenience). */
+export function getSavedCreds() {
+  try {
+    const raw = localStorage.getItem(CREDS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      username: String(parsed.username || ""),
+      password: String(parsed.password || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function setSavedCreds(username, password) {
+  localStorage.setItem(
+    CREDS_KEY,
+    JSON.stringify({
+      username: String(username || ""),
+      password: String(password || ""),
+    })
+  );
+}
+
+export function clearSavedCreds() {
+  localStorage.removeItem(CREDS_KEY);
 }
 
 async function j(method, path, body, auth = false) {
