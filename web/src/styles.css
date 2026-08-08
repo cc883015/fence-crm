@@ -115,6 +115,7 @@ button, input, select, textarea { font: inherit; }
   gap: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.04em;
+  flex-shrink: 0;
 }
 .brand-mark {
   width: 2rem;
@@ -126,6 +127,18 @@ button, input, select, textarea { font: inherit; }
   place-items: center;
   font-weight: 800;
   font-size: 1rem;
+}
+.brand-logo {
+  display: block;
+  height: 2.65rem;
+  width: auto;
+  max-width: min(240px, 52vw);
+  object-fit: contain;
+  object-position: left center;
+}
+.brand-logo-admin {
+  height: 2.35rem;
+  max-width: min(200px, 46vw);
 }
 .header-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .btn {
@@ -1164,6 +1177,8 @@ button, input, select, textarea { font: inherit; }
     gap: 0.45rem;
   }
   .brand span:not(.brand-mark) { font-size: 0.92rem; }
+  .brand-logo { height: 2.25rem; max-width: min(190px, 48vw); }
+  .brand-logo-admin { height: 2rem; max-width: min(160px, 42vw); }
   .header-actions {
     gap: 0.3rem;
     justify-content: flex-end;
@@ -1251,7 +1266,7 @@ button, input, select, textarea { font: inherit; }
     border-radius: 0.9rem;
   }
   .admin-nav .brand { gap: 0.4rem; }
-  .admin-nav .brand span:not(.brand-mark) { font-size: 0.95rem; }
+  .admin-nav .brand-logo { height: 1.95rem; }
   .admin-links {
     width: 100%;
     overflow-x: auto;

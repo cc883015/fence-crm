@@ -100,9 +100,14 @@ export default function Home() {
   return (
     <>
       <header className="site-header ts-glass">
-        <Link to="/" className="brand">
-          <span className="brand-mark">N</span>
-          <span>NOVA FENCE</span>
+        <Link to="/" className="brand" aria-label="NOVA FENCE">
+          <img
+            className="brand-logo"
+            src="/nova-fence-logo.png"
+            alt="NOVA FENCE"
+            width="220"
+            height="48"
+          />
         </Link>
         <div className="header-actions">
           <a className="btn btn-ghost btn-sm" href="#products">{t(lang, "Products", "产品")}</a>
