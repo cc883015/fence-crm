@@ -345,8 +345,20 @@ app.post("/api/payments", async (c) => {
   return c.json({ ok: true, id: res.meta.last_row_id });
 });
 
-function mapsUrl(address) {
+function googleMapsUrl(address) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || "")}`;
+}
+
+/**
+ * HTTPS bridge page for WeChat / group chats.
+ * maps:// alone is not clickable there; this https link is, then jumps into Apple Maps with the address.
+ */
+function appleMapsShareUrl(address, requestUrl) {
+  let origin = "https://fence-crm.n12047805.workers.dev";
+  try {
+    origin = new URL(requestUrl).origin;
+  } catch { /* keep default */ }
+  return `${origin}/go/apple-maps?q=${encodeURIComponent(address || "")}`;
 }
 
 function weekdayFromDate(dateStr) {
@@ -358,13 +370,70 @@ function weekdayFromDate(dateStr) {
   return "";
 }
 
-function mapAppointment(row) {
+function mapAppointment(row, requestUrl) {
   if (!row) return row;
   return {
     ...row,
-    maps_url: mapsUrl(row.address),
+    maps_url: googleMapsUrl(row.address),
+    apple_maps_url: appleMapsShareUrl(row.address, requestUrl),
   };
 }
+
+/** Public bridge: clickable in WeChat → open Apple Maps app with address. */
+app.get("/go/apple-maps", (c) => {
+  const q = (c.req.query("q") || "").trim();
+  const qEnc = encodeURIComponent(q);
+  const mapsApp = `maps://?q=${qEnc}`;
+  // Apple's documented http map link — on iOS this usually hands off to the Maps app
+  const mapsHttp = `http://maps.apple.com/?q=${qEnc}`;
+  const esc = (s) =>
+    String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/"/g, "&quot;");
+
+  return c.html(`<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>打开苹果地图</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: #f4f6f8; color: #1a2744; padding: 1.5rem; text-align: center; }
+    .card { background: #fff; border-radius: 1rem; padding: 1.5rem 1.25rem;
+      max-width: 22rem; width: 100%; box-shadow: 0 8px 28px rgba(0,0,0,.08); }
+    h1 { font-size: 1.15rem; margin: 0 0 .5rem; }
+    p { margin: .35rem 0; color: #5a6578; font-size: .95rem; word-break: break-word; }
+    .btn { display: block; margin-top: 1rem; padding: .9rem 1rem; border-radius: .75rem;
+      background: #1a2744; color: #fff; text-decoration: none; font-weight: 700; }
+    .btn.secondary { background: #e8ecf2; color: #1a2744; margin-top: .65rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>打开苹果地图</h1>
+    <p>${q ? esc(q) : "未提供地址"}</p>
+    <p style="font-size:.85rem">正在跳转到苹果地图 App…</p>
+    <a class="btn" id="openApp" href="${mapsApp}">打开苹果地图 App</a>
+    <a class="btn secondary" href="${mapsHttp}">若未跳转，点这里</a>
+  </div>
+  <script>
+    (function () {
+      var app = ${JSON.stringify(mapsApp)};
+      var http = ${JSON.stringify(mapsHttp)};
+      // Try native scheme first (opens Maps app with address filled in)
+      window.location.href = app;
+      setTimeout(function () {
+        // Fallback: Apple http map link (still usually opens the app on iPhone)
+        window.location.href = http;
+      }, 600);
+    })();
+  </script>
+</body>
+</html>`);
+});
 
 app.get("/api/appointments", async (c) => {
   const weekday = c.req.query("weekday"); // wed | sat | all
@@ -383,7 +452,7 @@ app.get("/api/appointments", async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT * FROM measurement_appointments ${where} ORDER BY appointment_date ASC, appointment_time ASC, id DESC`
   ).bind(...binds).all();
-  return c.json(results.map(mapAppointment));
+  return c.json(results.map((row) => mapAppointment(row, c.req.url)));
 });
 
 app.get("/api/appointments/:id", async (c) => {
@@ -391,7 +460,7 @@ app.get("/api/appointments/:id", async (c) => {
     "SELECT * FROM measurement_appointments WHERE id=?1"
   ).bind(c.req.param("id")).first();
   if (!row) return c.json({ error: "not found" }, 404);
-  return c.json(mapAppointment(row));
+  return c.json(mapAppointment(row, c.req.url));
 });
 
 app.post("/api/appointments", async (c) => {
@@ -419,7 +488,7 @@ app.post("/api/appointments", async (c) => {
   const row = await c.env.DB.prepare(
     "SELECT * FROM measurement_appointments WHERE id=?1"
   ).bind(res.meta.last_row_id).first();
-  return c.json(mapAppointment(row));
+  return c.json(mapAppointment(row, c.req.url));
 });
 
 app.put("/api/appointments/:id", async (c) => {
@@ -451,7 +520,7 @@ app.put("/api/appointments/:id", async (c) => {
   const row = await c.env.DB.prepare(
     "SELECT * FROM measurement_appointments WHERE id=?1"
   ).bind(id).first();
-  return c.json(mapAppointment(row));
+  return c.json(mapAppointment(row, c.req.url));
 });
 
 app.delete("/api/appointments/:id", async (c) => {
