@@ -26,18 +26,6 @@ const SECTIONS = [
         price: 389,
       },
       {
-        code: "VB060",
-        desc_zh: "刀片围栏 · 2400×600",
-        desc_en: "Vertical Blade Fence - 2400*600",
-        price: 260,
-      },
-      {
-        code: "VB150",
-        desc_zh: "刀片围栏 · 2400×1500",
-        desc_en: "Vertical Blade Fence - 2400*1500",
-        price: 450,
-      },
-      {
         code: "VF2B00",
         desc_zh: "刀片围栏 · 2400×1200 · Black Gloss / Grey Matte",
         desc_en: "Vertical blade fence - 2400*1200",
