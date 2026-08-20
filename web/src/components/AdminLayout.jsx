@@ -19,6 +19,7 @@ const INBOX_STATUS_LINKS = [
 function currentNavLabel(pathname, inboxStatus) {
   if (pathname.startsWith("/admin/checklist")) return "每日必查清单";
   if (pathname.startsWith("/admin/prices")) return "常见产品报价参考";
+  if (pathname.startsWith("/admin/quote-summary")) return "客户报价单概要";
   if (pathname.startsWith("/admin/appointments")) return "测量系统";
   if (pathname === "/admin/inbox") {
     const hit = INBOX_STATUS_LINKS.find((s) => s.status === inboxStatus);
@@ -81,6 +82,12 @@ export default function AdminLayout() {
             to="/admin/prices"
           >
             常见产品报价参考
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => `navlink navlink-quote${isActive ? " on" : ""}`}
+            to="/admin/quote-summary"
+          >
+            客户报价单概要
           </NavLink>
           <NavLink
             className={({ isActive }) => `navlink navlink-blue${isActive ? " on" : ""}`}
