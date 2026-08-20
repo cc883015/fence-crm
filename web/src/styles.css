@@ -196,6 +196,16 @@ button, input, select, textarea { font: inherit; }
 .btn-primary:hover { background: var(--color-brand-strong); }
 .btn-ghost { background: transparent; color: var(--color-ink); }
 .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.9rem; }
+.btn-quote-new {
+  background: #1565c0;
+  color: #fff;
+}
+.btn-quote-new:hover { background: #0d47a1; color: #fff; }
+.btn-quote-done {
+  background: #2e7d32;
+  color: #fff;
+}
+.btn-quote-done:hover { background: #1b5e20; color: #fff; }
 .btn-danger { background: #b33; color: #fff; }
 
 /* Hero */

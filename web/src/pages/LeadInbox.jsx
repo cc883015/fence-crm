@@ -531,14 +531,14 @@ export default function LeadInbox() {
                   <span className="muted">录入 {formatWhen(row.created_at)}</span>
                   <div className="inbox-meta-actions">
                     <Link
-                      className="btn btn-sm btn-primary"
+                      className={`btn btn-sm ${row.quote_summary_id ? "btn-quote-done" : "btn-quote-new"}`}
                       to={
                         row.quote_summary_id
                           ? `/admin/quote-summary?id=${row.quote_summary_id}`
                           : `/admin/quote-summary?leadId=${row.id}`
                       }
                     >
-                      {row.quote_summary_id ? "报价概要" : "写报价概要"}
+                      报价概要
                     </Link>
                     <button type="button" className="btn btn-sm btn-ghost" onClick={() => askDeleteLead(row)}>删除</button>
                   </div>
