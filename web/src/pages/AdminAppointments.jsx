@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { fuzzyMatch } from "../lib/fuzzy.js";
 
@@ -648,6 +649,16 @@ export default function AdminAppointments() {
                   <button type="button" className="btn btn-sm btn-primary" onClick={() => openCard(a)}>
                     卡片
                   </button>
+                  <Link
+                    className="btn btn-sm btn-ghost"
+                    to={
+                      a.quote_summary_id
+                        ? `/admin/quote-summary?id=${a.quote_summary_id}`
+                        : `/admin/quote-summary?appointmentId=${a.id}`
+                    }
+                  >
+                    {a.quote_summary_id ? "报价概要" : "写报价"}
+                  </Link>
                   <button type="button" className="btn btn-sm btn-ghost" onClick={() => edit(a)}>
                     编辑
                   </button>

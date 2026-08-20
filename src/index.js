@@ -187,6 +187,8 @@ app.use("/api/appointments/*", requireAuth);
 app.use("/api/appointments", requireAuth);
 app.use("/api/inbox/*", requireAuth);
 app.use("/api/inbox", requireAuth);
+app.use("/api/quote-summaries/*", requireAuth);
+app.use("/api/quote-summaries", requireAuth);
 app.use("/api/leads", async (c, next) => {
   if (c.req.method === "GET") return requireAuth(c, next);
   return next();
@@ -370,12 +372,22 @@ function weekdayFromDate(dateStr) {
   return "";
 }
 
-function mapAppointment(row, requestUrl) {
+async function mapAppointment(row, requestUrl, db) {
   if (!row) return row;
+  let quoteSummaryId = null;
+  if (db) {
+    try {
+      const latest = await db.prepare(
+        `SELECT id FROM quote_summaries WHERE appointment_id=?1 ORDER BY updated_at DESC, id DESC LIMIT 1`
+      ).bind(row.id).first();
+      quoteSummaryId = latest?.id || null;
+    } catch { /* migration pending */ }
+  }
   return {
     ...row,
     maps_url: googleMapsUrl(row.address),
     apple_maps_url: appleMapsShareUrl(row.address, requestUrl),
+    quote_summary_id: quoteSummaryId,
   };
 }
 
@@ -452,7 +464,7 @@ app.get("/api/appointments", async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT * FROM measurement_appointments ${where} ORDER BY appointment_date ASC, appointment_time ASC, id DESC`
   ).bind(...binds).all();
-  return c.json(results.map((row) => mapAppointment(row, c.req.url)));
+  return c.json(await Promise.all(results.map((row) => mapAppointment(row, c.req.url, c.env.DB))));
 });
 
 app.get("/api/appointments/:id", async (c) => {
@@ -460,7 +472,7 @@ app.get("/api/appointments/:id", async (c) => {
     "SELECT * FROM measurement_appointments WHERE id=?1"
   ).bind(c.req.param("id")).first();
   if (!row) return c.json({ error: "not found" }, 404);
-  return c.json(mapAppointment(row, c.req.url));
+  return c.json(await mapAppointment(row, c.req.url, c.env.DB));
 });
 
 app.post("/api/appointments", async (c) => {
@@ -488,7 +500,7 @@ app.post("/api/appointments", async (c) => {
   const row = await c.env.DB.prepare(
     "SELECT * FROM measurement_appointments WHERE id=?1"
   ).bind(res.meta.last_row_id).first();
-  return c.json(mapAppointment(row, c.req.url));
+  return c.json(await mapAppointment(row, c.req.url, c.env.DB));
 });
 
 app.put("/api/appointments/:id", async (c) => {
@@ -520,7 +532,7 @@ app.put("/api/appointments/:id", async (c) => {
   const row = await c.env.DB.prepare(
     "SELECT * FROM measurement_appointments WHERE id=?1"
   ).bind(id).first();
-  return c.json(mapAppointment(row, c.req.url));
+  return c.json(await mapAppointment(row, c.req.url, c.env.DB));
 });
 
 app.delete("/api/appointments/:id", async (c) => {
@@ -582,7 +594,20 @@ async function mapInbox(db, row) {
   await migrateLegacyPhotos(db, row);
   const photos = await listPhotosForLead(db, row.id);
   const { photos: _drop, ...rest } = row;
-  return { ...rest, photos };
+  let quoteSummaryId = null;
+  try {
+    const latestQuote = await db.prepare(
+      `SELECT id FROM quote_summaries WHERE lead_id=?1 ORDER BY updated_at DESC, id DESC LIMIT 1`
+    ).bind(row.id).first();
+    quoteSummaryId = latestQuote?.id || null;
+  } catch {
+    // Table may not exist until migration 0010 is applied
+  }
+  return {
+    ...rest,
+    photos,
+    quote_summary_id: quoteSummaryId,
+  };
 }
 
 function normalizeQuotation(q) {
@@ -870,6 +895,117 @@ app.get("/api/reports/summary", async (c) => {
     FROM customers GROUP BY COALESCE(NULLIF(fence_style,''),'unset') ORDER BY n DESC
   `).all()).results;
   return c.json({ total, depNone, depPaid, full, bySource, byStyle });
+});
+
+function mapQuoteSummary(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    lead_id: row.lead_id ?? null,
+    appointment_id: row.appointment_id ?? null,
+    payload: safeJson(row.payload, {}),
+  };
+}
+
+function parseOptionalId(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+app.get("/api/quote-summaries", async (c) => {
+  const leadId = parseOptionalId(c.req.query("lead_id"));
+  const appointmentId = parseOptionalId(c.req.query("appointment_id"));
+  const clauses = [];
+  const binds = [];
+  if (leadId) {
+    clauses.push(`lead_id=?${binds.length + 1}`);
+    binds.push(leadId);
+  }
+  if (appointmentId) {
+    clauses.push(`appointment_id=?${binds.length + 1}`);
+    binds.push(appointmentId);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  const { results } = await c.env.DB.prepare(
+    `SELECT * FROM quote_summaries ${where} ORDER BY updated_at DESC, id DESC`
+  ).bind(...binds).all();
+  return c.json((results || []).map(mapQuoteSummary));
+});
+
+app.get("/api/quote-summaries/:id", async (c) => {
+  const row = await c.env.DB.prepare(
+    "SELECT * FROM quote_summaries WHERE id=?1"
+  ).bind(c.req.param("id")).first();
+  if (!row) return c.json({ error: "not found" }, 404);
+  return c.json(mapQuoteSummary(row));
+});
+
+app.post("/api/quote-summaries", async (c) => {
+  const b = await c.req.json();
+  const name = String(b.name || "").trim();
+  if (!name) return c.json({ error: "name required" }, 400);
+  const leadId = parseOptionalId(b.lead_id);
+  const appointmentId = parseOptionalId(b.appointment_id);
+  const payload = typeof b.payload === "string" ? b.payload : JSON.stringify(b.payload || {});
+  const res = await c.env.DB.prepare(
+    `INSERT INTO quote_summaries
+      (lead_id, appointment_id, name, phone, address, payload, summary_text)
+     VALUES (?1,?2,?3,?4,?5,?6,?7)`
+  ).bind(
+    leadId,
+    appointmentId,
+    name,
+    String(b.phone || "").trim(),
+    String(b.address || "").trim(),
+    payload,
+    String(b.summary_text || "").trim()
+  ).run();
+  const row = await c.env.DB.prepare(
+    "SELECT * FROM quote_summaries WHERE id=?1"
+  ).bind(res.meta.last_row_id).first();
+  return c.json(mapQuoteSummary(row));
+});
+
+app.put("/api/quote-summaries/:id", async (c) => {
+  const id = c.req.param("id");
+  const prev = await c.env.DB.prepare(
+    "SELECT * FROM quote_summaries WHERE id=?1"
+  ).bind(id).first();
+  if (!prev) return c.json({ error: "not found" }, 404);
+  const b = await c.req.json();
+  const name = String(b.name ?? prev.name ?? "").trim() || prev.name;
+  const leadId = b.lead_id !== undefined ? parseOptionalId(b.lead_id) : prev.lead_id;
+  const appointmentId =
+    b.appointment_id !== undefined ? parseOptionalId(b.appointment_id) : prev.appointment_id;
+  const payload =
+    b.payload !== undefined
+      ? (typeof b.payload === "string" ? b.payload : JSON.stringify(b.payload || {}))
+      : prev.payload;
+  await c.env.DB.prepare(
+    `UPDATE quote_summaries SET
+      lead_id=?1, appointment_id=?2, name=?3, phone=?4, address=?5,
+      payload=?6, summary_text=?7, updated_at=datetime('now')
+     WHERE id=?8`
+  ).bind(
+    leadId,
+    appointmentId,
+    name,
+    String(b.phone ?? prev.phone ?? "").trim(),
+    String(b.address ?? prev.address ?? "").trim(),
+    payload,
+    String(b.summary_text ?? prev.summary_text ?? "").trim(),
+    id
+  ).run();
+  const row = await c.env.DB.prepare(
+    "SELECT * FROM quote_summaries WHERE id=?1"
+  ).bind(id).first();
+  return c.json(mapQuoteSummary(row));
+});
+
+app.delete("/api/quote-summaries/:id", async (c) => {
+  await c.env.DB.prepare("DELETE FROM quote_summaries WHERE id=?1").bind(c.req.param("id")).run();
+  return c.json({ ok: true });
 });
 
 // SPA / static assets fallback (non-API)
