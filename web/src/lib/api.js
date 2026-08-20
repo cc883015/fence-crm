@@ -98,4 +98,15 @@ export const api = {
   getInboxPhoto: (id, photoId) => j("GET", `/inbox/${id}/photos/${photoId}`, null, true),
   deleteInboxPhoto: (id, photoId) => j("DELETE", `/inbox/${id}/photos/${photoId}`, null, true),
   inboxLogs: (limit = 40) => j("GET", `/inbox/logs?limit=${limit}`, null, true),
+  quoteSummaries: (q = {}) => {
+    const params = new URLSearchParams();
+    if (q.lead_id) params.set("lead_id", q.lead_id);
+    if (q.appointment_id) params.set("appointment_id", q.appointment_id);
+    const qs = params.toString();
+    return j("GET", `/quote-summaries${qs ? `?${qs}` : ""}`, null, true);
+  },
+  quoteSummary: (id) => j("GET", `/quote-summaries/${id}`, null, true),
+  createQuoteSummary: (d) => j("POST", "/quote-summaries", d, true),
+  updateQuoteSummary: (id, d) => j("PUT", `/quote-summaries/${id}`, d, true),
+  deleteQuoteSummary: (id) => j("DELETE", `/quote-summaries/${id}`, null, true),
 };

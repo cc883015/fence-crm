@@ -1879,6 +1879,12 @@ a.product-shop-link:hover img {
   align-items: center;
   gap: 0.75rem;
 }
+.inbox-meta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
 .inbox-photos {
   display: flex;
   flex-direction: column;

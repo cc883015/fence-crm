@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api.js";
 
 const STATUSES = [
@@ -529,7 +529,19 @@ export default function LeadInbox() {
                 </div>
                 <div className="inbox-meta">
                   <span className="muted">录入 {formatWhen(row.created_at)}</span>
-                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => askDeleteLead(row)}>删除</button>
+                  <div className="inbox-meta-actions">
+                    <Link
+                      className="btn btn-sm btn-primary"
+                      to={
+                        row.quote_summary_id
+                          ? `/admin/quote-summary?id=${row.quote_summary_id}`
+                          : `/admin/quote-summary?leadId=${row.id}`
+                      }
+                    >
+                      {row.quote_summary_id ? "报价概要" : "写报价概要"}
+                    </Link>
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => askDeleteLead(row)}>删除</button>
+                  </div>
                 </div>
               </div>
 

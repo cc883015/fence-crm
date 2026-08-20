@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { fuzzyMatch } from "../lib/fuzzy.js";
 
@@ -55,6 +55,7 @@ const GATE_CUSTOM = [
 
 const emptyForm = {
   leadId: "",
+  appointmentId: "",
   name: "",
   phone: "",
   address: "",
@@ -121,20 +122,115 @@ function ColorPicker({ label, preset, custom, onPreset, onCustom }) {
 }
 
 export default function QuoteSummary() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
+  const [appointments, setAppointments] = useState([]);
   const [leadQ, setLeadQ] = useState("");
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [form, setForm] = useState(emptyForm);
+  const [savedId, setSavedId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [loadingDoc, setLoadingDoc] = useState(true);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
-    api
-      .inbox()
-      .then(setLeads)
+    Promise.all([api.inbox(), api.appointments()])
+      .then(([inboxRows, apptRows]) => {
+        setLeads(inboxRows || []);
+        setAppointments(apptRows || []);
+      })
       .catch((e) => setErr(String(e.message || e)));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const boot = async () => {
+      setLoadingDoc(true);
+      setErr("");
+      try {
+        const id = searchParams.get("id");
+        const leadId = searchParams.get("leadId");
+        const appointmentId = searchParams.get("appointmentId");
+
+        if (id) {
+          const doc = await api.quoteSummary(id);
+          if (cancelled) return;
+          applySavedDoc(doc);
+          setSavedId(String(doc.id));
+          return;
+        }
+
+        if (leadId) {
+          const existing = await api.quoteSummaries({ lead_id: leadId });
+          if (cancelled) return;
+          if (existing?.[0]) {
+            applySavedDoc(existing[0]);
+            setSavedId(String(existing[0].id));
+            navigate(`/admin/quote-summary?id=${existing[0].id}`, { replace: true });
+            return;
+          }
+          const lead = (await api.inbox()).find((l) => String(l.id) === String(leadId));
+          if (cancelled) return;
+          setSavedId("");
+          setForm({
+            ...emptyForm,
+            leadId: String(leadId),
+            name: lead?.name || "",
+            phone: lead?.phone || "",
+            address: lead?.address || "",
+          });
+          return;
+        }
+
+        if (appointmentId) {
+          const existing = await api.quoteSummaries({ appointment_id: appointmentId });
+          if (cancelled) return;
+          if (existing?.[0]) {
+            applySavedDoc(existing[0]);
+            setSavedId(String(existing[0].id));
+            navigate(`/admin/quote-summary?id=${existing[0].id}`, { replace: true });
+            return;
+          }
+          const appt = (await api.appointments()).find((a) => String(a.id) === String(appointmentId));
+          if (cancelled) return;
+          setSavedId("");
+          setForm({
+            ...emptyForm,
+            appointmentId: String(appointmentId),
+            name: appt?.name || "",
+            phone: appt?.phone || "",
+            address: appt?.address || "",
+          });
+          return;
+        }
+
+        setSavedId("");
+        setForm(emptyForm);
+      } catch (e) {
+        if (!cancelled) setErr(String(e.message || e));
+      } finally {
+        if (!cancelled) setLoadingDoc(false);
+      }
+    };
+    boot();
+    return () => { cancelled = true; };
+  }, [searchParams, navigate]);
+
+  const applySavedDoc = (doc) => {
+    const payload = doc.payload && typeof doc.payload === "object" ? doc.payload : {};
+    setForm({
+      ...emptyForm,
+      ...payload,
+      leadId: doc.lead_id ? String(doc.lead_id) : payload.leadId || "",
+      appointmentId: doc.appointment_id ? String(doc.appointment_id) : payload.appointmentId || "",
+      name: doc.name || payload.name || "",
+      phone: doc.phone || payload.phone || "",
+      address: doc.address || payload.address || "",
+    });
+  };
 
   const filteredLeads = useMemo(() => {
     const q = leadQ.trim();
@@ -262,11 +358,43 @@ export default function QuoteSummary() {
     }
   };
 
+  const saveSummary = async () => {
+    if (!form.name.trim()) {
+      setErr("请先填写姓名");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const body = {
+        lead_id: form.leadId || null,
+        appointment_id: form.appointmentId || null,
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim(),
+        payload: form,
+        summary_text: summaryLines,
+      };
+      const row = savedId
+        ? await api.updateQuoteSummary(savedId, body)
+        : await api.createQuoteSummary(body);
+      setSavedId(String(row.id));
+      setOk(savedId ? "报价概要已更新" : "报价概要已保存，可从来客跟进 / 测量打开");
+      navigate(`/admin/quote-summary?id=${row.id}`, { replace: true });
+    } catch (e) {
+      setErr(String(e.message || e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const reset = () => {
     setForm(emptyForm);
+    setSavedId("");
     setLeadQ("");
     setOk("");
     setErr("");
+    navigate("/admin/quote-summary", { replace: true });
   };
 
   const selectedStillVisible =
@@ -280,11 +408,13 @@ export default function QuoteSummary() {
           <p className="ts-eyebrow">Mobile quote sheet · 报价概要</p>
           <h2 style={{ margin: "0.2rem 0 0" }}>客户报价单概要</h2>
           <p className="muted">
-            手机端收集现场选项。姓名可关联「来客跟进」全部状态；可用关键词缩小名单。定制颜色会提示 $40/米。
+            写完直接保存到系统，并绑定来客跟进 / 测量预约。来客卡片与测量列表可一键打开。
+            {savedId ? ` · 已保存 #${savedId}` : ""}
           </p>
         </div>
       </div>
 
+      {loadingDoc && <p className="muted">加载中…</p>}
       {err && <p className="err">{err}</p>}
       {ok && <p className="ok">{ok}</p>}
 
@@ -292,7 +422,7 @@ export default function QuoteSummary() {
         className="ts-glass quote-summary-form"
         onSubmit={(e) => {
           e.preventDefault();
-          copySummary();
+          saveSummary();
         }}
       >
         <div className="field">
@@ -331,6 +461,37 @@ export default function QuoteSummary() {
               }`}
             >
               打开来客跟进 ↗
+            </Link>
+          )}
+        </div>
+
+        <div className="field">
+          <label>绑定测量预约（可选）</label>
+          <select
+            value={form.appointmentId}
+            onChange={(e) => {
+              const id = e.target.value;
+              const appt = appointments.find((a) => String(a.id) === String(id));
+              setForm((f) => ({
+                ...f,
+                appointmentId: id,
+                name: f.name || appt?.name || "",
+                phone: f.phone || appt?.phone || "",
+                address: f.address || appt?.address || "",
+              }));
+            }}
+          >
+            <option value="">不绑定测量预约</option>
+            {appointments.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.appointment_date} {a.appointment_time || ""} · {a.name}
+                {a.address ? ` · ${a.address}` : ""}
+              </option>
+            ))}
+          </select>
+          {form.appointmentId && (
+            <Link className="maps-link" to="/admin/appointments">
+              打开测量系统 ↗
             </Link>
           )}
         </div>
@@ -553,11 +714,14 @@ export default function QuoteSummary() {
         </section>
 
         <div className="toolbar quote-summary-actions">
-          <button type="submit" className="btn btn-primary">
-            复制报价概要
+          <button type="submit" className="btn btn-primary" disabled={busy || loadingDoc}>
+            {busy ? "保存中…" : savedId ? "保存更新" : "保存报价概要"}
+          </button>
+          <button type="button" className="btn btn-ghost ts-glass" onClick={copySummary}>
+            复制文案
           </button>
           <button type="button" className="btn btn-ghost ts-glass" onClick={reset}>
-            清空
+            新建空白
           </button>
         </div>
       </form>
