@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api.js";
+import { fuzzyMatch } from "../lib/fuzzy.js";
 
-const COLORS = [
+const COLOR_PRESETS = [
   { id: "Black", zh: "黑色 Black" },
   { id: "Grey", zh: "灰色 Grey" },
+  { id: "custom", zh: "定制颜色 Custom" },
 ];
 
 const FENCE_STYLES = [
@@ -58,14 +60,17 @@ const emptyForm = {
   address: "",
   fenceStyle: "",
   fenceColor: "Black",
+  fenceColorCustom: "",
   drivewayWall: "",
   nearMeter: "",
   brickNeed: "",
   gateCustom: "",
   motor: "standard",
   gateColor: "Black",
+  gateColorCustom: "",
   sideGate: "",
   sideGateColor: "Black",
+  sideGateColorCustom: "",
   notes: "",
 };
 
@@ -81,8 +86,43 @@ function Warn({ children }) {
   return <p className="quote-warn-blink" role="alert">{children}</p>;
 }
 
+function colorLabel(preset, custom) {
+  if (preset === "custom") {
+    return custom.trim() ? `定制颜色：${custom.trim()}` : "定制颜色（未填写）";
+  }
+  return preset || "—";
+}
+
+function ColorPicker({ label, preset, custom, onPreset, onCustom }) {
+  const isCustom = preset === "custom";
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <div className="quote-color-row">
+        <select value={preset} onChange={(e) => onPreset(e.target.value)}>
+          {COLOR_PRESETS.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.zh}
+            </option>
+          ))}
+        </select>
+        {isCustom ? (
+          <input
+            value={custom}
+            onChange={(e) => onCustom(e.target.value)}
+            placeholder="输入定制颜色名…"
+            aria-label={`${label}定制颜色`}
+          />
+        ) : null}
+      </div>
+      {isCustom ? <Warn>定制颜色额外收费 $40 / 米</Warn> : null}
+    </div>
+  );
+}
+
 export default function QuoteSummary() {
   const [leads, setLeads] = useState([]);
+  const [leadQ, setLeadQ] = useState("");
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [form, setForm] = useState(emptyForm);
@@ -96,12 +136,18 @@ export default function QuoteSummary() {
       .catch((e) => setErr(String(e.message || e)));
   }, []);
 
-  // Custom gate always forces high-power motor
-  useEffect(() => {
-    if (form.gateCustom === "yes" && form.motor !== "high") {
-      setForm((f) => ({ ...f, motor: "high" }));
-    }
-  }, [form.gateCustom, form.motor]);
+  const filteredLeads = useMemo(() => {
+    const q = leadQ.trim();
+    if (!q) return leads;
+    return leads.filter(
+      (l) =>
+        fuzzyMatch(l.name, q) ||
+        fuzzyMatch(l.phone, q) ||
+        fuzzyMatch(l.email, q) ||
+        fuzzyMatch(l.address, q) ||
+        fuzzyMatch(STATUS_ZH[l.status] || l.status, q)
+    );
+  }, [leads, leadQ]);
 
   const pickLead = (id) => {
     const lead = leads.find((l) => String(l.id) === String(id));
@@ -123,7 +169,10 @@ export default function QuoteSummary() {
   const warnBrick =
     form.brickNeed === "existing" || form.brickNeed === "new";
   const warnNoBrickInground = form.brickNeed === "none";
-  const warnCustomMotor = form.gateCustom === "yes";
+  const warnCustomColor =
+    form.fenceColor === "custom" ||
+    form.gateColor === "custom" ||
+    (form.sideGate && form.sideGateColor === "custom");
 
   const fenceLabel = FENCE_STYLES.find((s) => s.id === form.fenceStyle);
   const motorLabel = MOTORS.find((m) => m.id === form.motor);
@@ -137,7 +186,7 @@ export default function QuoteSummary() {
       form.phone ? `电话：${form.phone}` : null,
       form.address ? `地址：${form.address}` : null,
       `栅栏样式：${fenceLabel ? `${fenceLabel.zh} / ${fenceLabel.en}` : "—"}`,
-      `栅栏颜色：${form.fenceColor || "—"}`,
+      `栅栏颜色：${colorLabel(form.fenceColor, form.fenceColorCustom)}`,
       `Driveway 滑动门砖墙：${
         form.drivewayWall === "with_wall"
           ? "有砖墙（可依靠）"
@@ -160,10 +209,12 @@ export default function QuoteSummary() {
       `大门是否定制：${
         form.gateCustom === "yes" ? "是" : form.gateCustom === "no" ? "否" : "—"
       }`,
-      `大门颜色：${form.gateColor || "—"}`,
+      `大门颜色：${colorLabel(form.gateColor, form.gateColorCustom)}`,
       `电机：${motorLabel?.zh || "—"}`,
       `小门：${sideLabel && sideLabel.id ? sideLabel.zh : "—"}`,
-      form.sideGate ? `小门颜色：${form.sideGateColor}` : null,
+      form.sideGate
+        ? `小门颜色：${colorLabel(form.sideGateColor, form.sideGateColorCustom)}`
+        : null,
     ].filter(Boolean);
 
     const warns = [];
@@ -177,7 +228,9 @@ export default function QuoteSummary() {
     if (warnNoBrickInground) {
       warns.push("⚠ 无砖墙：使用直接入地的柱子（Inground Post）");
     }
-    if (warnCustomMotor) warns.push("⚠ 定制门：必须使用大功率电机");
+    if (warnCustomColor) {
+      warns.push("⚠ 定制颜色：额外收费 $40 / 米");
+    }
 
     if (warns.length) {
       lines.push("————————————", "结论 / 警示：", ...warns);
@@ -195,7 +248,7 @@ export default function QuoteSummary() {
     warnMeter,
     warnBrick,
     warnNoBrickInground,
-    warnCustomMotor,
+    warnCustomColor,
   ]);
 
   const copySummary = async () => {
@@ -211,9 +264,14 @@ export default function QuoteSummary() {
 
   const reset = () => {
     setForm(emptyForm);
+    setLeadQ("");
     setOk("");
     setErr("");
   };
+
+  const selectedStillVisible =
+    !form.leadId ||
+    filteredLeads.some((l) => String(l.id) === String(form.leadId));
 
   return (
     <div className="orders-main quote-summary-page">
@@ -222,7 +280,7 @@ export default function QuoteSummary() {
           <p className="ts-eyebrow">Mobile quote sheet · 报价概要</p>
           <h2 style={{ margin: "0.2rem 0 0" }}>客户报价单概要</h2>
           <p className="muted">
-            手机端收集现场选项。姓名可关联「来客跟进」全部状态客户；结论区会汇总红色慢闪警示。
+            手机端收集现场选项。姓名可关联「来客跟进」全部状态；可用关键词缩小名单。定制颜色会提示 $40/米。
           </p>
         </div>
       </div>
@@ -239,19 +297,32 @@ export default function QuoteSummary() {
       >
         <div className="field">
           <label>关联来客跟进（全部状态）</label>
-          <select
-            value={form.leadId}
-            onChange={(e) => pickLead(e.target.value)}
-          >
-            <option value="">不关联 / 手动填姓名</option>
-            {leads.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-                {l.phone ? ` · ${l.phone}` : ""}
-                {` · ${STATUS_ZH[l.status] || l.status}`}
-              </option>
-            ))}
-          </select>
+          <div className="quote-lead-row">
+            <select
+              value={selectedStillVisible ? form.leadId : ""}
+              onChange={(e) => pickLead(e.target.value)}
+            >
+              <option value="">不关联 / 手动填姓名</option>
+              {filteredLeads.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                  {l.phone ? ` · ${l.phone}` : ""}
+                  {` · ${STATUS_ZH[l.status] || l.status}`}
+                </option>
+              ))}
+            </select>
+            <input
+              type="search"
+              value={leadQ}
+              onChange={(e) => setLeadQ(e.target.value)}
+              placeholder="检索关键词…"
+              aria-label="检索来客"
+            />
+          </div>
+          <p className="muted" style={{ fontSize: "0.82rem", margin: "0.25rem 0 0" }}>
+            显示 {filteredLeads.length}/{leads.length} 条
+            {leadQ.trim() ? ` · 关键词「${leadQ.trim()}」` : ""}
+          </p>
           {form.leadId && (
             <Link
               className="maps-link"
@@ -317,19 +388,13 @@ export default function QuoteSummary() {
           </select>
         </div>
 
-        <div className="field">
-          <label>栅栏颜色</label>
-          <select
-            value={form.fenceColor}
-            onChange={(e) => set("fenceColor", e.target.value)}
-          >
-            {COLORS.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.zh}
-              </option>
-            ))}
-          </select>
-        </div>
+        <ColorPicker
+          label="栅栏颜色"
+          preset={form.fenceColor}
+          custom={form.fenceColorCustom}
+          onPreset={(v) => set("fenceColor", v)}
+          onCustom={(v) => set("fenceColorCustom", v)}
+        />
 
         <hr className="quote-divider" />
         <p className="quote-section-title">2 · Driveway / 滑动门</p>
@@ -361,31 +426,21 @@ export default function QuoteSummary() {
               </option>
             ))}
           </select>
-          {warnCustomMotor && (
-            <Warn>定制门必须使用大功率电机（已自动选中）</Warn>
-          )}
         </div>
 
-        <div className="field">
-          <label>大门颜色</label>
-          <select
-            value={form.gateColor}
-            onChange={(e) => set("gateColor", e.target.value)}
-          >
-            {COLORS.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.zh}
-              </option>
-            ))}
-          </select>
-        </div>
+        <ColorPicker
+          label="大门颜色"
+          preset={form.gateColor}
+          custom={form.gateColorCustom}
+          onPreset={(v) => set("gateColor", v)}
+          onCustom={(v) => set("gateColorCustom", v)}
+        />
 
         <div className="field">
           <label>电机</label>
           <select
             value={form.motor}
             onChange={(e) => set("motor", e.target.value)}
-            disabled={form.gateCustom === "yes"}
           >
             {MOTORS.map((m) => (
               <option key={m.id} value={m.id}>
@@ -395,7 +450,7 @@ export default function QuoteSummary() {
           </select>
           {form.gateCustom === "yes" && (
             <span className="muted" style={{ fontSize: "0.82rem" }}>
-              定制门锁定为大功率电机
+              定制门可选手动选电机（含大功率）
             </span>
           )}
         </div>
@@ -418,19 +473,13 @@ export default function QuoteSummary() {
         </div>
 
         {form.sideGate ? (
-          <div className="field">
-            <label>小门颜色</label>
-            <select
-              value={form.sideGateColor}
-              onChange={(e) => set("sideGateColor", e.target.value)}
-            >
-              {COLORS.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.zh}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ColorPicker
+            label="小门颜色"
+            preset={form.sideGateColor}
+            custom={form.sideGateColorCustom}
+            onPreset={(v) => set("sideGateColor", v)}
+            onCustom={(v) => set("sideGateColorCustom", v)}
+          />
         ) : null}
 
         <hr className="quote-divider" />
@@ -479,7 +528,11 @@ export default function QuoteSummary() {
 
         <section className="quote-conclusion ts-glass-soft">
           <h3>结论 / 警示</h3>
-          {!warnNoWall && !warnMeter && !warnBrick && !warnNoBrickInground && !warnCustomMotor && (
+          {!warnNoWall &&
+            !warnMeter &&
+            !warnBrick &&
+            !warnNoBrickInground &&
+            !warnCustomColor && (
             <p className="muted">当前选项暂无额外警示。</p>
           )}
           {warnNoWall && <Warn>无砖墙：增加两根 100mm 柱子</Warn>}
@@ -496,7 +549,7 @@ export default function QuoteSummary() {
           {warnNoBrickInground && (
             <Warn>无砖墙：使用直接入地的柱子（Inground Post）</Warn>
           )}
-          {warnCustomMotor && <Warn>定制门：必须使用大功率电机</Warn>}
+          {warnCustomColor && <Warn>定制颜色：额外收费 $40 / 米</Warn>}
         </section>
 
         <div className="toolbar quote-summary-actions">
