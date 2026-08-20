@@ -29,6 +29,7 @@ const BRICK_NEED = [
   { id: "", zh: "请选择…" },
   { id: "existing", zh: "基于现有砖墙" },
   { id: "new", zh: "新砖墙" },
+  { id: "none", zh: "无砖墙" },
 ];
 
 const MOTORS = [
@@ -121,6 +122,7 @@ export default function QuoteSummary() {
   const warnMeter = form.nearMeter === "yes";
   const warnBrick =
     form.brickNeed === "existing" || form.brickNeed === "new";
+  const warnNoBrickInground = form.brickNeed === "none";
   const warnCustomMotor = form.gateCustom === "yes";
 
   const fenceLabel = FENCE_STYLES.find((s) => s.id === form.fenceStyle);
@@ -151,7 +153,9 @@ export default function QuoteSummary() {
           ? "基于现有砖墙"
           : form.brickNeed === "new"
             ? "新砖墙"
-            : "—"
+            : form.brickNeed === "none"
+              ? "无砖墙"
+              : "—"
       }`,
       `大门是否定制：${
         form.gateCustom === "yes" ? "是" : form.gateCustom === "no" ? "否" : "—"
@@ -170,6 +174,9 @@ export default function QuoteSummary() {
         "⚠ 砖墙方案：垂直请使用标准 1.2 米刀片围栏；水平可根据客户需求定制"
       );
     }
+    if (warnNoBrickInground) {
+      warns.push("⚠ 无砖墙：使用直接入地的柱子（Inground Post）");
+    }
     if (warnCustomMotor) warns.push("⚠ 定制门：必须使用大功率电机");
 
     if (warns.length) {
@@ -187,6 +194,7 @@ export default function QuoteSummary() {
     warnNoWall,
     warnMeter,
     warnBrick,
+    warnNoBrickInground,
     warnCustomMotor,
   ]);
 
@@ -454,6 +462,9 @@ export default function QuoteSummary() {
               </option>
             ))}
           </select>
+          {warnNoBrickInground && (
+            <Warn>使用直接入地的柱子（Inground Post）</Warn>
+          )}
         </div>
 
         <div className="field">
@@ -468,7 +479,7 @@ export default function QuoteSummary() {
 
         <section className="quote-conclusion ts-glass-soft">
           <h3>结论 / 警示</h3>
-          {!warnNoWall && !warnMeter && !warnBrick && !warnCustomMotor && (
+          {!warnNoWall && !warnMeter && !warnBrick && !warnNoBrickInground && !warnCustomMotor && (
             <p className="muted">当前选项暂无额外警示。</p>
           )}
           {warnNoWall && <Warn>无砖墙：增加两根 100mm 柱子</Warn>}
@@ -481,6 +492,9 @@ export default function QuoteSummary() {
             <Warn>
               请注意：垂直请使用标准 1.2 米刀片围栏；水平可以根据客户需求定制
             </Warn>
+          )}
+          {warnNoBrickInground && (
+            <Warn>无砖墙：使用直接入地的柱子（Inground Post）</Warn>
           )}
           {warnCustomMotor && <Warn>定制门：必须使用大功率电机</Warn>}
         </section>
