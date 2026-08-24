@@ -4,7 +4,7 @@ const STORAGE_KEY = "nova_daily_checklist_v1";
 
 const ITEMS = [
   { id: "enquiries", zh: "查看新资讯 / 官网报价，及时回电", en: "Check Enquiries & call back" },
-  { id: "measure", zh: "确认今日/本周 周三·周六 测量行程", en: "Confirm Wed/Sat measure runs" },
+  { id: "measure", zh: "确认今日/本周上门测量行程", en: "Confirm this week's measure runs" },
   { id: "deposit", zh: "跟进未付定金客户", en: "Chase unpaid deposits" },
   { id: "quotes", zh: "发出或跟进待确认报价", en: "Send / follow up quotes" },
   { id: "stock", zh: "核对常用款式现货与颜色", en: "Check stock & colours" },
