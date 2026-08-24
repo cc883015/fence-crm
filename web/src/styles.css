@@ -1631,7 +1631,11 @@ a.product-shop-link:hover img {
   .hero-quick .chip:nth-child(n+3) { display: none; }
 }
 
-/* Wed / Sat measurement appointments */
+/* Measurement appointments */
+.appt-day-filters {
+  max-width: 28rem;
+  justify-content: flex-end;
+}
 .appt-list-tools {
   margin-top: 1rem;
   padding: 0.75rem 0.85rem;

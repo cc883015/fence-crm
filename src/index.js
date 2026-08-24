@@ -366,10 +366,7 @@ function appleMapsShareUrl(address, requestUrl) {
 function weekdayFromDate(dateStr) {
   const d = new Date(`${dateStr}T12:00:00`);
   if (Number.isNaN(d.getTime())) return "";
-  const n = d.getDay(); // 0 Sun … 6 Sat
-  if (n === 3) return "wed";
-  if (n === 6) return "sat";
-  return "";
+  return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][d.getDay()] || "";
 }
 
 async function mapAppointment(row, requestUrl, db) {
@@ -448,11 +445,12 @@ app.get("/go/apple-maps", (c) => {
 });
 
 app.get("/api/appointments", async (c) => {
-  const weekday = c.req.query("weekday"); // wed | sat | all
+  const weekday = c.req.query("weekday"); // sun…sat | all
   const status = c.req.query("status");
   const clauses = [];
   const binds = [];
-  if (weekday === "wed" || weekday === "sat") {
+  const WEEKDAYS = new Set(["sun", "mon", "tue", "wed", "thu", "fri", "sat"]);
+  if (weekday && WEEKDAYS.has(weekday)) {
     clauses.push(`weekday=?${binds.length + 1}`);
     binds.push(weekday);
   }
@@ -490,7 +488,7 @@ app.post("/api/appointments", async (c) => {
   }
   const weekday = weekdayFromDate(appointment_date);
   if (!weekday) {
-    return c.json({ error: "appointment_date must be a Wednesday or Saturday" }, 400);
+    return c.json({ error: "appointment_date invalid" }, 400);
   }
   const res = await c.env.DB.prepare(
     `INSERT INTO measurement_appointments
@@ -520,7 +518,7 @@ app.put("/api/appointments/:id", async (c) => {
   const status = String(b.status ?? prev.status ?? "scheduled").trim();
   const weekday = weekdayFromDate(appointment_date);
   if (!weekday) {
-    return c.json({ error: "appointment_date must be a Wednesday or Saturday" }, 400);
+    return c.json({ error: "appointment_date invalid" }, 400);
   }
   await c.env.DB.prepare(
     `UPDATE measurement_appointments SET

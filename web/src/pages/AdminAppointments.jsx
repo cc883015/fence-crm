@@ -19,24 +19,37 @@ const empty = {
   status: "scheduled",
 };
 
-const WEEKDAY_ZH = { wed: "周三", sat: "周六" };
-const WEEKDAY_EN = { wed: "Wednesday", sat: "Saturday" };
+const WEEKDAY_ZH = {
+  sun: "周日",
+  mon: "周一",
+  tue: "周二",
+  wed: "周三",
+  thu: "周四",
+  fri: "周五",
+  sat: "周六",
+};
+const WEEKDAY_EN = {
+  sun: "Sunday",
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+};
+const WEEKDAY_FILTERS = ["all", "mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 function weekdayOf(dateStr) {
   if (!dateStr) return "";
   const d = new Date(`${dateStr}T12:00:00`);
   if (Number.isNaN(d.getTime())) return "";
-  const n = d.getDay();
-  if (n === 3) return "wed";
-  if (n === 6) return "sat";
-  return "";
+  return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][d.getDay()] || "";
 }
 
-function nextWeekdayDate(targetDay) {
+function offsetDate(days) {
   const d = new Date();
   d.setHours(12, 0, 0, 0);
-  const delta = (targetDay - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + delta);
+  d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
@@ -146,7 +159,7 @@ function drawShareCard(canvas, a) {
 
   ctx.fillStyle = "#c9a227";
   ctx.font = "600 15px Outfit, sans-serif";
-  ctx.fillText("文字含 Google / Apple 地图链接（点开即带地址）· 周三/周六", 40, H - 28);
+  ctx.fillText("文字含 Google / Apple 地图链接（点开即带地址）", 40, H - 28);
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -212,7 +225,6 @@ export default function AdminAppointments() {
   useEffect(load, [filter]);
 
   const liveWeekday = weekdayOf(form.appointment_date);
-  const invalidDay = form.appointment_date && !liveWeekday;
 
   const visible = useMemo(() => {
     const q = nameQ.trim();
@@ -244,7 +256,7 @@ export default function AdminAppointments() {
     setErr("");
     setOk("");
     try {
-      if (!liveWeekday) throw new Error("预约日期必须是周三或周六");
+      if (!form.appointment_date || !liveWeekday) throw new Error("请选择有效的预约日期");
       const payload = { ...form };
       const wasEdit = !!editingId;
       const row = wasEdit
@@ -355,25 +367,25 @@ export default function AdminAppointments() {
     <div className="orders-main appt-page">
       <div className="orders-head">
         <div>
-          <p className="ts-eyebrow">Wed / Sat · Site measure</p>
+          <p className="ts-eyebrow">Any day · Site measure</p>
           <h2 style={{ margin: "0.2rem 0 0" }}>
-            周三 / 周六上门测量
+            上门测量预约
             <span className="muted" style={{ fontSize: "1rem", fontWeight: 500 }}>
               {" "}· 显示 {filteredHint.shown}/{filteredHint.total}
               <span style={{ marginLeft: "0.5rem" }}>未测 {filteredHint.pending} · 完成 {filteredHint.done}</span>
             </span>
           </h2>
-          <p className="muted">录入客户与预约信息，生成小卡片分享到群；下方列表可搜索、按时间排序、筛选未测/完成。</p>
+          <p className="muted">录入客户与预约信息，生成小卡片分享到群；周一到周日都可预约。下方列表可搜索、按时间排序、筛选未测/完成。</p>
         </div>
-        <div className="toolbar" style={{ margin: 0 }}>
-          {["all", "wed", "sat"].map((k) => (
+        <div className="toolbar appt-day-filters" style={{ margin: 0 }}>
+          {WEEKDAY_FILTERS.map((k) => (
             <button
               key={k}
               type="button"
               className={`btn btn-sm ${filter === k ? "btn-primary" : "btn-ghost ts-glass"}`}
               onClick={() => setFilter(k)}
             >
-              {k === "all" ? "全部" : k === "wed" ? "周三" : "周六"}
+              {k === "all" ? "全部" : WEEKDAY_ZH[k]}
             </button>
           ))}
         </div>
@@ -398,7 +410,7 @@ export default function AdminAppointments() {
               <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="optional@" />
             </div>
             <div className="field">
-              <label>预约日期 *（仅周三 / 周六）</label>
+              <label>预约日期 *</label>
               <input
                 required
                 type="date"
@@ -413,9 +425,7 @@ export default function AdminAppointments() {
                 value={
                   liveWeekday
                     ? `${WEEKDAY_ZH[liveWeekday]} · ${WEEKDAY_EN[liveWeekday]}`
-                    : form.appointment_date
-                      ? "不是周三或周六"
-                      : "选择日期后自动显示"
+                    : "选择日期后自动显示"
                 }
               />
             </div>
@@ -466,20 +476,19 @@ export default function AdminAppointments() {
           </div>
 
           <div className="toolbar" style={{ marginTop: "0.85rem" }}>
-            <button type="button" className="btn btn-ghost btn-sm ts-glass" onClick={() => set("appointment_date", nextWeekdayDate(3))}>
-              下个周三
+            <button type="button" className="btn btn-ghost btn-sm ts-glass" onClick={() => set("appointment_date", offsetDate(0))}>
+              今天
             </button>
-            <button type="button" className="btn btn-ghost btn-sm ts-glass" onClick={() => set("appointment_date", nextWeekdayDate(6))}>
-              下个周六
+            <button type="button" className="btn btn-ghost btn-sm ts-glass" onClick={() => set("appointment_date", offsetDate(1))}>
+              明天
             </button>
           </div>
 
-          {invalidDay && <p className="err">测量日只能选周三或周六</p>}
           {err && <p className="err">{err}</p>}
           {ok && <p className="ok">{ok}</p>}
 
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={busy || invalidDay}>
+            <button type="submit" className="btn btn-primary" disabled={busy}>
               {busy ? "保存中…" : editingId ? "更新并生成卡片" : "保存并生成卡片"}
             </button>
             {editingId && (
