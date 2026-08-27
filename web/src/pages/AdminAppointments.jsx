@@ -531,7 +531,7 @@ export default function AdminAppointments() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Apple 地图
+                  Apple 地图导航
                 </a>
               </div>
             </>
