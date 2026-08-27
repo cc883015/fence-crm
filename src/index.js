@@ -352,8 +352,8 @@ function googleMapsUrl(address) {
 }
 
 /**
- * HTTPS bridge page for WeChat / group chats.
- * maps:// alone is not clickable there; this https link is, then jumps into Apple Maps with the address.
+ * HTTPS bridge for WeChat / group chats.
+ * Opens Apple Maps app with the destination filled and driving directions ready.
  */
 function appleMapsShareUrl(address, requestUrl) {
   let origin = "https://fence-crm.n12047805.workers.dev";
@@ -388,13 +388,13 @@ async function mapAppointment(row, requestUrl, db) {
   };
 }
 
-/** Public bridge: clickable in WeChat → open Apple Maps app with address. */
+/** Public bridge: https (WeChat-clickable) → Apple Maps app with navigation to address. */
 app.get("/go/apple-maps", (c) => {
   const q = (c.req.query("q") || "").trim();
   const qEnc = encodeURIComponent(q);
-  const mapsApp = `maps://?q=${qEnc}`;
-  // Apple's documented http map link — on iOS this usually hands off to the Maps app
-  const mapsHttp = `http://maps.apple.com/?q=${qEnc}`;
+  // daddr + dirflg=d → destination filled, driving directions (opens Maps app on iPhone)
+  const mapsApp = `maps://?daddr=${qEnc}&dirflg=d`;
+  const mapsHttp = `http://maps.apple.com/?daddr=${qEnc}&dirflg=d`;
   const esc = (s) =>
     String(s)
       .replace(/&/g, "&amp;")
@@ -406,7 +406,8 @@ app.get("/go/apple-maps", (c) => {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>打开苹果地图</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>苹果地图导航</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0; min-height: 100vh; display: grid; place-items: center;
@@ -415,29 +416,28 @@ app.get("/go/apple-maps", (c) => {
       max-width: 22rem; width: 100%; box-shadow: 0 8px 28px rgba(0,0,0,.08); }
     h1 { font-size: 1.15rem; margin: 0 0 .5rem; }
     p { margin: .35rem 0; color: #5a6578; font-size: .95rem; word-break: break-word; }
-    .btn { display: block; margin-top: 1rem; padding: .9rem 1rem; border-radius: .75rem;
+    .btn { display: block; margin-top: 1rem; padding: .95rem 1rem; border-radius: .75rem;
       background: #1a2744; color: #fff; text-decoration: none; font-weight: 700; }
     .btn.secondary { background: #e8ecf2; color: #1a2744; margin-top: .65rem; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>打开苹果地图</h1>
+    <h1>打开苹果地图导航</h1>
     <p>${q ? esc(q) : "未提供地址"}</p>
-    <p style="font-size:.85rem">正在跳转到苹果地图 App…</p>
-    <a class="btn" id="openApp" href="${mapsApp}">打开苹果地图 App</a>
-    <a class="btn secondary" href="${mapsHttp}">若未跳转，点这里</a>
+    <p style="font-size:.85rem">正在跳转…地址已填好，开始驾车导航</p>
+    <a class="btn" id="openApp" href="${mapsApp}">打开苹果地图并导航</a>
+    <a class="btn secondary" href="${mapsHttp}">若未跳转，点这里导航</a>
   </div>
   <script>
     (function () {
       var app = ${JSON.stringify(mapsApp)};
       var http = ${JSON.stringify(mapsHttp)};
-      // Try native scheme first (opens Maps app with address filled in)
+      // Prefer native scheme so iPhone opens Maps with destination + directions
       window.location.href = app;
       setTimeout(function () {
-        // Fallback: Apple http map link (still usually opens the app on iPhone)
         window.location.href = http;
-      }, 600);
+      }, 500);
     })();
   </script>
 </body>

@@ -58,8 +58,8 @@ function googleMapsUrl(address) {
 }
 
 /**
- * HTTPS bridge on our site (clickable in WeChat), then jumps into Apple Maps with the address.
- * Raw maps:// is not auto-linked in WeChat group chats.
+ * HTTPS bridge → Apple Maps app with destination + driving directions.
+ * WeChat needs https; the bridge then jumps to maps:// navigation.
  */
 function appleMapsUrl(address) {
   const origin =
@@ -96,7 +96,7 @@ function shareText(a) {
     `时间：${formatDateZh(a.appointment_date)}${wdLabel ? `（${wdLabel}）` : ""}${a.appointment_time ? ` ${a.appointment_time}` : ""}`,
     `地址：${a.address || "—"}`,
     `Google 地图：${maps.google}`,
-    `Apple 地图：${maps.apple}`,
+    `Apple 地图导航：${maps.apple}`,
   ];
   if (a.email) lines.push(`邮箱：${a.email}`);
   if (a.notes) lines.push(`备注：${a.notes}`);
@@ -159,7 +159,7 @@ function drawShareCard(canvas, a) {
 
   ctx.fillStyle = "#c9a227";
   ctx.font = "600 15px Outfit, sans-serif";
-  ctx.fillText("文字含 Google / Apple 地图链接（点开即带地址）", 40, H - 28);
+  ctx.fillText("文字含 Google / Apple 地图导航链接（点开即带地址）", 40, H - 28);
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -451,7 +451,7 @@ export default function AdminAppointments() {
                     Google 地图 ↗
                   </a>
                   <a className="maps-link" href={appleMapsUrl(form.address)} target="_blank" rel="noreferrer">
-                    Apple 地图 ↗
+                    Apple 地图导航 ↗
                   </a>
                 </span>
               )}
