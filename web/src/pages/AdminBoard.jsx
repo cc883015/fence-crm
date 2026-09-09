@@ -54,6 +54,7 @@ export default function AdminBoard() {
     <>
       <div className="toolbar">
         <Link className="btn btn-primary" to="/admin/new">+ 新客户 · New Customer</Link>
+        <Link className="btn btn-ghost ts-glass" to="/admin/quote">快速报价 · Quick Quote</Link>
         <button type="button" className="btn btn-ghost ts-glass" onClick={() => exportCustomersExcel(filtered, `nova-board-${filter}.xlsx`)}>
           导出当前列表 Excel
         </button>

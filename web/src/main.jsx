@@ -9,6 +9,7 @@ import AdminBoard from "./pages/AdminBoard.jsx";
 import NewCustomerWizard from "./pages/NewCustomerWizard.jsx";
 import CustomerDetail from "./pages/CustomerDetail.jsx";
 import Reports from "./pages/Reports.jsx";
+import QuickQuote from "./pages/QuickQuote.jsx";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -30,6 +31,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="new" element={<NewCustomerWizard />} />
             <Route path="customers/:id" element={<CustomerDetail />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="quote" element={<QuickQuote />} />
           </Route>
         </Routes>
       </BrowserRouter>
