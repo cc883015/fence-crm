@@ -44,4 +44,8 @@ export const api = {
   deleteCustomer: (id) => j("DELETE", `/customers/${id}`, null, true),
   createPayment: (d) => j("POST", "/payments", d, true),
   summary: () => j("GET", "/reports/summary", null, true),
+  quickQuotes: () => j("GET", "/quick-quotes", null, true),
+  quickQuote: (id) => j("GET", `/quick-quotes/${encodeURIComponent(id)}`, null, true),
+  saveQuickQuote: (d) => j("POST", "/quick-quotes", d, true),
+  deleteQuickQuote: (id) => j("DELETE", `/quick-quotes/${encodeURIComponent(id)}`, null, true),
 };
