@@ -189,6 +189,8 @@ app.use("/api/inbox/*", requireAuth);
 app.use("/api/inbox", requireAuth);
 app.use("/api/quote-summaries/*", requireAuth);
 app.use("/api/quote-summaries", requireAuth);
+app.use("/api/quick-quotes", requireAuth);
+app.use("/api/quick-quotes/*", requireAuth);
 app.use("/api/leads", async (c, next) => {
   if (c.req.method === "GET") return requireAuth(c, next);
   return next();
@@ -1003,6 +1005,65 @@ app.put("/api/quote-summaries/:id", async (c) => {
 
 app.delete("/api/quote-summaries/:id", async (c) => {
   await c.env.DB.prepare("DELETE FROM quote_summaries WHERE id=?1").bind(c.req.param("id")).run();
+  return c.json({ ok: true });
+});
+
+app.get("/api/quick-quotes", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    "SELECT * FROM quick_quotes ORDER BY updated_at DESC, id DESC LIMIT 300"
+  ).all();
+  return c.json(results.map((r) => ({ ...r, payload: safeJson(r.payload, {}) })));
+});
+
+app.get("/api/quick-quotes/:quoteId", async (c) => {
+  const row = await c.env.DB.prepare(
+    "SELECT * FROM quick_quotes WHERE quote_id=?1"
+  ).bind(c.req.param("quoteId")).first();
+  if (!row) return c.json({ error: "not found" }, 404);
+  return c.json({ ...row, payload: safeJson(row.payload, {}) });
+});
+
+app.post("/api/quick-quotes", async (c) => {
+  const b = await c.req.json();
+  const name = String(b.customer_name || "").trim();
+  if (!name) return c.json({ error: "Please enter customer name." }, 400);
+  const quoteId = String(b.quote_id || "").trim();
+  if (!quoteId) return c.json({ error: "missing quote_id" }, 400);
+  const payload = JSON.stringify(b.payload || {});
+  const existing = await c.env.DB.prepare(
+    "SELECT id FROM quick_quotes WHERE quote_id=?1"
+  ).bind(quoteId).first();
+
+  if (existing) {
+    await c.env.DB.prepare(
+      `UPDATE quick_quotes SET
+        customer_name=?1, fence_type=?2, payload=?3, subtotal=?4, gst=?5,
+        discount=?6, adjustment=?7, total=?8, status=?9, updated_at=datetime('now')
+       WHERE quote_id=?10`
+    ).bind(
+      name, b.fence_type || "", payload,
+      Number(b.subtotal) || 0, Number(b.gst) || 0,
+      Number(b.discount) || 0, Number(b.adjustment) || 0,
+      Number(b.total) || 0, b.status || "saved", quoteId
+    ).run();
+    return c.json({ ok: true, id: existing.id, quote_id: quoteId, updated: true });
+  }
+
+  const res = await c.env.DB.prepare(
+    `INSERT INTO quick_quotes
+      (quote_id, customer_name, fence_type, payload, subtotal, gst, discount, adjustment, total, status)
+     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)`
+  ).bind(
+    quoteId, name, b.fence_type || "", payload,
+    Number(b.subtotal) || 0, Number(b.gst) || 0,
+    Number(b.discount) || 0, Number(b.adjustment) || 0,
+    Number(b.total) || 0, b.status || "saved"
+  ).run();
+  return c.json({ ok: true, id: res.meta.last_row_id, quote_id: quoteId });
+});
+
+app.delete("/api/quick-quotes/:quoteId", async (c) => {
+  await c.env.DB.prepare("DELETE FROM quick_quotes WHERE quote_id=?1").bind(c.req.param("quoteId")).run();
   return c.json({ ok: true });
 });
 

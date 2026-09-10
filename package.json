@@ -14,6 +14,8 @@
     "db:appointments:remote": "wrangler d1 execute fence_crm --remote --file=./migrations/0005_measurement_appointments.sql",
     "db:inbox:local": "wrangler d1 execute fence_crm --local --file=./migrations/0006_lead_inbox.sql",
     "db:inbox:remote": "wrangler d1 execute fence_crm --remote --file=./migrations/0006_lead_inbox.sql",
+    "db:quick-quotes:local": "wrangler d1 execute fence_crm --local --file=./migrations/0011_quick_quotes.sql",
+    "db:quick-quotes:remote": "wrangler d1 execute fence_crm --remote --file=./migrations/0011_quick_quotes.sql",
     "web:dev": "cd web && npm run dev",
     "web:build": "cd web && npm run build"
   },
