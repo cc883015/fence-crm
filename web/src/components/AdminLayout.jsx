@@ -20,6 +20,7 @@ function currentNavLabel(pathname, inboxStatus) {
   if (pathname.startsWith("/admin/checklist")) return "每日必查清单";
   if (pathname.startsWith("/admin/prices")) return "常见产品报价参考";
   if (pathname.startsWith("/admin/quote-summary")) return "客户报价单概要";
+  if (pathname.startsWith("/admin/quick-quote")) return "快速报价";
   if (pathname.startsWith("/admin/appointments")) return "测量系统";
   if (pathname === "/admin/inbox") {
     const hit = INBOX_STATUS_LINKS.find((s) => s.status === inboxStatus);
@@ -88,6 +89,12 @@ export default function AdminLayout() {
             to="/admin/quote-summary"
           >
             客户报价单概要
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => linkClass(isActive)}
+            to="/admin/quick-quote"
+          >
+            快速报价
           </NavLink>
           <NavLink
             className={({ isActive }) => `navlink navlink-blue${isActive ? " on" : ""}`}

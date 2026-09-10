@@ -11,6 +11,7 @@ import DailyChecklist from "./pages/DailyChecklist.jsx";
 import PriceGuide from "./pages/PriceGuide.jsx";
 import LeadInbox from "./pages/LeadInbox.jsx";
 import QuoteSummary from "./pages/QuoteSummary.jsx";
+import QuickQuote from "./pages/QuickQuote.jsx";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -35,6 +36,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               <Route path="prices" element={<PriceGuide />} />
               <Route path="appointments" element={<AdminAppointments />} />
               <Route path="quote-summary" element={<QuoteSummary />} />
+              <Route path="quick-quote" element={<QuickQuote />} />
               <Route path="inbox" element={<LeadInbox />} />
             </Route>
           </Routes>

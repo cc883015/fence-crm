@@ -109,4 +109,8 @@ export const api = {
   createQuoteSummary: (d) => j("POST", "/quote-summaries", d, true),
   updateQuoteSummary: (id, d) => j("PUT", `/quote-summaries/${id}`, d, true),
   deleteQuoteSummary: (id) => j("DELETE", `/quote-summaries/${id}`, null, true),
+  quickQuotes: () => j("GET", "/quick-quotes", null, true),
+  quickQuote: (id) => j("GET", `/quick-quotes/${encodeURIComponent(id)}`, null, true),
+  saveQuickQuote: (d) => j("POST", "/quick-quotes", d, true),
+  deleteQuickQuote: (id) => j("DELETE", `/quick-quotes/${encodeURIComponent(id)}`, null, true),
 };
