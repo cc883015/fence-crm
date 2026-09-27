@@ -1,0 +1,59 @@
+# Continuous Integration — 持续集成
+# 目标：每次推代码 / 开 PR 时，自动跑测试和打包，尽早发现问题。
+# 注意：这个流程【不会】部署到 Cloudflare（部署另见 deploy.yml）。
+
+name: CI
+
+# 什么时候自动跑
+on:
+  # 推送到任意分支时跑
+  push:
+  # 开或更新 Pull Request 时跑
+  pull_request:
+  # 也可以在 GitHub Actions 页面手动点 Run workflow
+  workflow_dispatch:
+
+# 同一分支上新的 CI 跑起来时，取消还在跑的旧任务，省额度
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 一个 job = 一台临时 Linux 虚拟机上跑完下面所有 steps
+  test-and-build:
+    name: Test and build
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) 把当前提交的代码下载到这台虚拟机
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) 安装 Node.js（和本地开发版本对齐）
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          # 用 package-lock.json 缓存 npm 依赖，加快下次 CI
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+
+      # 3) 安装仓库根目录依赖（Hono、Wrangler 等）
+      - name: Install root dependencies
+        run: npm ci
+
+      # 4) 安装前端依赖（React、Vite 等）
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      # 5) 跑单元测试（报价计算等）
+      - name: Run unit tests
+        working-directory: web
+        run: npm test
+
+      # 6) 打包前端；失败说明生产构建有问题
+      - name: Build frontend
+        run: npm run web:build
